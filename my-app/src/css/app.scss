@@ -1,0 +1,24 @@
+/* Global scroll handling: let <Page> manage scrolling */
+html, body, #app {
+  height: 100%;
+  overflow: hidden;
+}
+
+.page {
+  padding: 16px 16px 96px 16px;
+}
+
+.section-container {
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.zaui-list-item {
+  cursor: pointer;
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 44px);
+}
