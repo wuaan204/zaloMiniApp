@@ -226,19 +226,19 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
             <Text className="text-xs text-slate-500 dark:text-slate-400">{session.phone}</Text>
           </div>
 
-          {/* Colored Pill Boxes: Focus, Progress, Date */}
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className={`flex flex-col items-center justify-center text-center px-4 py-2.5 rounded-xl ${getFocusPillStyle()}`}>
-              <span className="text-xs font-semibold uppercase tracking-wide opacity-80 mb-1">Nội dung</span>
-              <span className="text-sm font-bold text-center">{session.focus}</span>
+          {/* Colored Pill Boxes: Focus, Progress, Date — strict grid-cols-3, never wraps */}
+          <div className="grid grid-cols-3 gap-2 w-full mt-3">
+            <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${getFocusPillStyle()}`}>
+              <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">NỘI DUNG</span>
+              <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{session.focus}</span>
             </div>
-            <div className={`flex flex-col items-center justify-center text-center px-4 py-2.5 rounded-xl ${getProgressPillStyle()}`}>
-              <span className="text-xs font-semibold uppercase tracking-wide opacity-80 mb-1">Tiến độ</span>
-              <span className="text-sm font-bold text-center">{session.sessionNumber}</span>
+            <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${getProgressPillStyle()}`}>
+              <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">TIẾN ĐỘ</span>
+              <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{session.sessionNumber}</span>
             </div>
-            <div className={`flex flex-col items-center justify-center text-center px-4 py-2.5 rounded-xl ${getDatePillStyle()}`}>
-              <span className="text-xs font-semibold uppercase tracking-wide opacity-80 mb-1">Ngày tập</span>
-              <span className="text-sm font-bold text-center">{formatDateLabel(session.date)}</span>
+            <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${getDatePillStyle()}`}>
+              <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">NGÀY TẬP</span>
+              <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{formatDateLabel(session.date)}</span>
             </div>
           </div>
 
@@ -339,8 +339,11 @@ function AddSessionView({ onClose, onSubmit, clients }) {
 
   return (
     <div className="p-4 pb-28 space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3 pb-3 pt-13 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 safe-area-top pr-24">
+      {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+      <div
+        className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 pr-24"
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+      >
         <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={onClose} className="flex-shrink-0">
           Hủy
         </Button>
@@ -480,8 +483,11 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
 
   return (
     <div className="p-4 pb-28 space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-3 pb-3 pt-13 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 safe-area-top pr-24">
+      {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+      <div
+        className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 pr-24"
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+      >
         <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={onClose} className="flex-shrink-0">
           Quay lại
         </Button>
@@ -513,19 +519,19 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
           </div>
         </div>
 
-        {/* Colored Pill Boxes */}
-        <div className="flex flex-wrap gap-2 pt-2">
-          <div className={`flex flex-col items-center justify-center text-center px-4 py-2.5 rounded-xl ${getFocusPillStyle()}`}>
-            <span className="text-xs font-semibold uppercase tracking-wide opacity-80 mb-1">Nội dung</span>
-            <span className="text-sm font-bold text-center">{localSession.focus}</span>
+        {/* Colored Pill Boxes — strict grid-cols-3, never wraps */}
+        <div className="grid grid-cols-3 gap-2 w-full pt-2">
+          <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${getFocusPillStyle()}`}>
+            <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">NỘI DUNG</span>
+            <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{localSession.focus}</span>
           </div>
-          <div className={`flex flex-col items-center justify-center text-center px-4 py-2.5 rounded-xl ${getProgressPillStyle()}`}>
-            <span className="text-xs font-semibold uppercase tracking-wide opacity-80 mb-1">Tiến độ</span>
-            <span className="text-sm font-bold text-center">{localSession.sessionNumber}</span>
+          <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${getProgressPillStyle()}`}>
+            <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">TIẾN ĐỘ</span>
+            <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{localSession.sessionNumber}</span>
           </div>
-          <div className={`flex flex-col items-center justify-center text-center px-4 py-2.5 rounded-xl ${getDatePillStyle()}`}>
-            <span className="text-xs font-semibold uppercase tracking-wide opacity-80 mb-1">Ngày tập</span>
-            <span className="text-sm font-bold text-center">{formatDateLabel(localSession.date)}</span>
+          <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${getDatePillStyle()}`}>
+            <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">NGÀY TẬP</span>
+            <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{formatDateLabel(localSession.date)}</span>
           </div>
         </div>
       </div>
@@ -762,15 +768,16 @@ export default function WorkoutsPage() {
   // Render List View
   return (
     <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 pt-13 sticky top-0 z-30 safe-area-top pr-24">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={() => navigate('/')}>Quay lại</Button>
-            <div>
-              <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Lịch & Buổi tập</Text.Title>
-              <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý buổi tập học viên</Text>
-            </div>
+      {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+      <div
+        className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+      >
+        <div className="flex items-center gap-2">
+          <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={() => navigate('/')}>Quay lại</Button>
+          <div className="flex-1 min-w-0">
+            <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Lịch & Buổi tập</Text.Title>
+            <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý buổi tập học viên</Text>
           </div>
         </div>
       </div>
@@ -801,11 +808,11 @@ export default function WorkoutsPage() {
               key={f.key}
               variant={activeFilter === f.key ? "primary" : "outline"}
               size="small"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0"
               onClick={() => setActiveFilter(f.key)}
             >
               {f.label}
-              <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-white/20 dark:bg-white/10">
+              <span className="ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 dark:bg-white/10 text-center font-bold">
                 {f.count}
               </span>
             </Button>

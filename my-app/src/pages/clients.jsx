@@ -240,8 +240,11 @@ function ClientDetailView({ client, onClose, onUpdateClient }) {
 
   return (
     <div className="p-4 pb-28 space-y-4">
-      {/* Header inside page (sticky handled by parent) */}
-      <div className="flex items-center gap-3 pb-3 pt-13 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 safe-area-top pr-24">
+      {/* Header inside page — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+      <div
+        className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 px-0 pr-24"
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+      >
         <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={onClose} className="flex-shrink-0">Quay lại</Button>
         <Avatar size="xlarge" src={client.avatar} alt={client.name} />
         <div className="flex-1 min-w-0">
@@ -257,19 +260,19 @@ function ClientDetailView({ client, onClose, onUpdateClient }) {
         </span>
       </div>
 
-      {/* Summary boxes with colored pills */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className={`rounded-2xl p-4 text-center ${pillClasses('goal')} border`}>
-          <Text className="text-xs font-medium">Mục tiêu</Text>
-          <Text className="font-semibold">{client.goal}</Text>
+      {/* Summary boxes — strict 3-column grid, never wraps */}
+      <div className="grid grid-cols-3 gap-2 w-full mt-3">
+        <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${pillClasses('goal')} border`}>
+          <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">Mục tiêu</span>
+          <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{client.goal}</span>
         </div>
-        <div className={`rounded-2xl p-4 text-center ${pillClasses('package')} border`}>
-          <Text className="text-xs font-medium">Gói tập</Text>
-          <Text className="font-semibold">{client.packageName}</Text>
+        <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${pillClasses('package')} border`}>
+          <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">Gói tập</span>
+          <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{client.packageName}</span>
         </div>
-        <div className={`rounded-2xl p-4 text-center ${pillClasses('contact', daysSince)} border`}>
-          <Text className="text-xs font-medium">Lần liên hệ</Text>
-          <Text className="font-semibold">{daysSince} ngày trước</Text>
+        <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${pillClasses('contact', daysSince)} border`}>
+          <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">Liên hệ</span>
+          <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{daysSince} ngày trước</span>
         </div>
       </div>
 
@@ -398,15 +401,16 @@ export default function ClientsPage() {
   // List View
   return (
     <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 pt-13 sticky top-0 z-30 safe-area-top pr-24">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={()=>navigate('/')}>Quay lại</Button>
-            <div>
-              <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Học viên</Text.Title>
-              <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý học viên</Text>
-            </div>
+      {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+      <div
+        className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+      >
+        <div className="flex items-center gap-2">
+          <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={()=>navigate('/')}>Quay lại</Button>
+          <div className="flex-1 min-w-0">
+            <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Học viên</Text.Title>
+            <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý học viên</Text>
           </div>
         </div>
       </div>
@@ -427,9 +431,9 @@ export default function ClientsPage() {
         {/* Filter Tabs */}
         <div className="flex gap-2 overflow-x-auto pb-2">
           {filters.map(f=>(
-            <Button key={f.key} variant={activeFilter===f.key?"primary":"outline"} size="small" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap" onClick={()=>setActiveFilter(f.key)}>
+            <Button key={f.key} variant={activeFilter===f.key?"primary":"outline"} size="small" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0" onClick={()=>setActiveFilter(f.key)}>
               {f.label}
-              <span className="ml-1 px-2 py-0.5 text-xs rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{f.count}</span>
+              <span className="ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 dark:bg-white/10 text-center font-bold">{f.count}</span>
             </Button>
           ))}
         </div>

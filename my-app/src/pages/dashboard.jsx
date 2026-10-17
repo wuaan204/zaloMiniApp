@@ -56,7 +56,10 @@ function InactiveClientCard({ client, onClick }) {
 function InactiveClientDetailView({ client, onClose, onMarkContacted }) {
   return (
     <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
-      <div className="flex items-center gap-3 pb-3 pt-13 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30">
+      <div
+        className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 pr-24"
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+      >
         <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={onClose} className="flex-shrink-0">
           Quay lại
         </Button>
@@ -131,20 +134,23 @@ function DashboardPage() {
         />
       ) : (
         <>
-          {/* Header */}
-          <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 pt-13 sticky top-0 z-30 safe-area-top pr-24">
-            <div className="flex items-center justify-between">
-              <div>
+          {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+          <div
+            className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
+            style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+          >
+            <div className="flex items-center">
+              <div className="flex-1 min-w-0">
                 <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Tổng quan</Text.Title>
                 <Text className="text-sm text-gray-500 dark:text-gray-400">Xin chào! Dưới đây là tình hình học viên hôm nay.</Text>
               </div>
             </div>
           </div>
 
-          {/* Action Button Row */}
-          <div className="p-4 flex justify-end">
+          {/* Sub-header: Action Button Row — sits below the title bar, fully clickable */}
+          <div className="px-4 pt-3 pb-1 flex justify-end">
             <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={() => navigate('/clients')}>
-              Thêm học viên
+              + Thêm học viên
             </Button>
           </div>
 
