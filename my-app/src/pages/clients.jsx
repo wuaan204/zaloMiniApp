@@ -155,16 +155,16 @@ function ClientCard({ client, onClick }) {
             </span>
           </div>
 
-          {/* Pills row */}
+          {/* Pills row — 3-col grid, text centered in every pill */}
           <div className="grid grid-cols-3 gap-2 mb-2">
-            <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${pillClasses('goal')}`}>
+            <span className={`flex items-center justify-center text-center px-2 py-1.5 rounded-full text-xs font-semibold w-full min-w-0 ${pillClasses('goal')}`}>
               {client.goal}
             </span>
-            <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${pillClasses('package')}`}>
+            <span className={`flex items-center justify-center text-center px-2 py-1.5 rounded-full text-xs font-semibold w-full min-w-0 ${pillClasses('package')}`}>
               {client.packageName}
             </span>
-            <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${pillClasses('contact', daysSince)}`}>
-              {isInactive ? `Cần theo dõi • ${daysSince} ngày` : `Liên hệ ${daysSince} ngày trước`}
+            <span className={`flex items-center justify-center text-center px-2 py-1.5 rounded-full text-xs font-semibold w-full min-w-0 leading-tight ${pillClasses('contact', daysSince)}`}>
+              {isInactive ? `Cần theo dõi` : `${daysSince}ng trước`}
             </span>
           </div>
 
@@ -407,7 +407,7 @@ export default function ClientsPage() {
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
         <div className="flex items-center gap-2">
-          <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={()=>navigate('/')}>Quay lại</Button>
+          <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={()=>navigate(-1)}>Quay lại</Button>
           <div className="flex-1 min-w-0">
             <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Học viên</Text.Title>
             <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý học viên</Text>
@@ -428,8 +428,8 @@ export default function ClientsPage() {
           </Button>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        {/* Filter Tabs — scrollbar hidden for clean mobile look */}
+        <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {filters.map(f=>(
             <Button key={f.key} variant={activeFilter===f.key?"primary":"outline"} size="small" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0" onClick={()=>setActiveFilter(f.key)}>
               {f.label}

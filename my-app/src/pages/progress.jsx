@@ -12,7 +12,7 @@ function ProgressPage() {
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
         <div className="flex items-center gap-2">
-          <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={() => navigate('/')}>Quay lại</Button>
+          <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={() => navigate(-1)}>Quay lại</Button>
           <div className="flex-1 min-w-0">
             <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Tiến độ InBody</Text.Title>
             <Text className="text-sm text-gray-500 dark:text-gray-400">Theo dõi thành phần cơ thể</Text>

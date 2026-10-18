@@ -184,21 +184,21 @@ function DashboardPage() {
               </div>
             </div>
 
-            {/* Quick Actions */}
+            {/* Management Menu */}
             <div className="bg-white rounded-xl shadow-sm p-4 space-y-3 dark:bg-gray-800 dark:border dark:border-gray-700">
-              <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Thao tác nhanh</Text.Title>
+              <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Danh mục quản lý</Text.Title>
               <div className="grid grid-cols-2 gap-3">
-                <Button className="bg-blue-50 border border-blue-200 text-blue-700 font-semibold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/clients')}>
+                <Button className="bg-blue-100 border-2 border-blue-300 text-blue-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/clients')}>
                   Quản lý học viên
                 </Button>
-                <Button className="bg-indigo-50 border border-indigo-200 text-indigo-700 font-semibold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/workouts')}>
+                <Button className="bg-indigo-100 border-2 border-indigo-300 text-indigo-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/workouts')}>
                   Lịch &amp; Buổi tập
                 </Button>
-                <Button className="bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/progress')}>
+                <Button className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/progress')}>
                   Chỉ số InBody
                 </Button>
-                <Button className="bg-amber-50 border border-amber-200 text-amber-700 font-semibold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => setShowAddNote(!showAddNote)}>
-                  Thêm ghi chú nhanh
+                <Button className="bg-amber-100 border-2 border-amber-300 text-amber-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => setShowAddNote(!showAddNote)}>
+                  Ghi chú nhanh
                 </Button>
               </div>
             </div>

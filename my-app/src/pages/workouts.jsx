@@ -774,7 +774,7 @@ export default function WorkoutsPage() {
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
         <div className="flex items-center gap-2">
-          <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={() => navigate('/')}>Quay lại</Button>
+          <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={() => navigate(-1)}>Quay lại</Button>
           <div className="flex-1 min-w-0">
             <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Lịch & Buổi tập</Text.Title>
             <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý buổi tập học viên</Text>
@@ -801,8 +801,8 @@ export default function WorkoutsPage() {
           </Button>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        {/* Filter Tabs — scrollbar hidden for clean mobile look */}
+        <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {filters.map(f => (
             <Button
               key={f.key}
