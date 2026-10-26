@@ -1,31 +1,97 @@
 import { Page, Text, Box, Avatar, Button, Icon, useNavigate } from "zmp-ui";
 import React, { useState } from "react";
 
-// Mock data for dashboard stats
+// Mock data for dashboard stats — svgIcon is inline SVG for each card
+const SvgUsers = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87M15 11a4 4 0 10-8 0 4 4 0 008 0zm6-4a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+const SvgCheckCircle = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+const SvgCalendar = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+const SvgChart = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0120 9.414V19a2 2 0 01-2 2z" />
+  </svg>
+);
+
 const stats = [
-  { label: "Tổng học viên", value: "42", icon: "zi-user-group", color: "text-blue-600", bg: "bg-blue-50", abbrev: "HV" },
-  { label: "Đi tập tuần này", value: "28", icon: "zi-check-circle", color: "text-green-600", bg: "bg-green-50", abbrev: "ĐT" },
-  { label: "Buổi dạy tuần này", value: "67", icon: "zi-calendar", color: "text-purple-600", bg: "bg-purple-50", abbrev: "BD" },
-  { label: "Bản ghi InBody", value: "156", icon: "zi-chart-line", color: "text-orange-600", bg: "bg-orange-50", abbrev: "InBody" },
+  { label: "Tổng học viên",     value: "42",  color: "text-blue-600",   bg: "bg-blue-50",   SvgIcon: SvgUsers },
+  { label: "Đi tập tuần này",   value: "28",  color: "text-green-600",  bg: "bg-green-50",  SvgIcon: SvgCheckCircle },
+  { label: "Buổi dạy tuần này", value: "67",  color: "text-purple-600", bg: "bg-purple-50", SvgIcon: SvgCalendar },
+  { label: "Bản ghi InBody",    value: "156", color: "text-orange-600", bg: "bg-orange-50", SvgIcon: SvgChart },
 ];
 
-// Mock data for inactive clients (7-10 days)
+// Mock data for inactive clients (7-10 days) — enriched with full profile info
 const inactiveClients = [
-  { id: 1, name: "Nguyễn Văn An", lastActive: "8 ngày chưa tương tác", avatar: "https://i.pravatar.cc/150?u=1", phone: "0901 234 567", lastWorkout: "2026-10-05" },
-  { id: 2, name: "Trần Thị Bình", lastActive: "9 ngày chưa tương tác", avatar: "https://i.pravatar.cc/150?u=2", phone: "0912 345 678", lastWorkout: "2026-10-04" },
-  { id: 3, name: "Lê Văn Cường", lastActive: "7 ngày chưa tương tác", avatar: "https://i.pravatar.cc/150?u=3", phone: "0923 456 789", lastWorkout: "2026-10-06" },
-  { id: 4, name: "Phạm Thị Dung", lastActive: "10 ngày chưa tương tác", avatar: "https://i.pravatar.cc/150?u=4", phone: "0934 567 890", lastWorkout: "2026-10-03" },
-  { id: 5, name: "Hoàng Văn Em", lastActive: "8 ngày chưa tương tác", avatar: "https://i.pravatar.cc/150?u=5", phone: "0945 678 901", lastWorkout: "2026-10-05" },
+  {
+    id: 1, name: "Nguyễn Văn An", lastActive: "8 ngày chưa tương tác",
+    avatar: "https://i.pravatar.cc/150?u=1", phone: "0901 234 567",
+    lastWorkout: "2026-10-05", daysInactive: 8,
+    goal: "Giảm mỡ", packageName: "Gói 24 buổi",
+    completedSessions: 8, totalSessions: 24,
+    lastWorkoutFocus: "Thân trên - Ngực & Tay sau",
+    note: "Đang áp dụng thực đơn giảm carb. Cần hỏi thăm cân nặng và mức độ kiên trì tuần này.",
+    suggestedAction: "Nhắn Zalo hỏi thăm cân nặng, nhắc đặt lịch buổi 9 vào thứ 4 tuần này.",
+  },
+  {
+    id: 2, name: "Trần Thị Bình", lastActive: "9 ngày chưa tương tác",
+    avatar: "https://i.pravatar.cc/150?u=2", phone: "0912 345 678",
+    lastWorkout: "2026-10-04", daysInactive: 9,
+    goal: "Tăng cơ", packageName: "Gói 36 buổi",
+    completedSessions: 15, totalSessions: 36,
+    lastWorkoutFocus: "Chân & Mông - Squat PR 80kg",
+    note: "Đang tập upper/lower split. Buổi cuối đạt PR squat 80kg, tinh thần tốt.",
+    suggestedAction: "Hỏi thăm tình trạng phục hồi sau buổi leg day, gợi ý đặt lịch buổi 16.",
+  },
+  {
+    id: 3, name: "Lê Văn Cường", lastActive: "7 ngày chưa tương tác",
+    avatar: "https://i.pravatar.cc/150?u=3", phone: "0923 456 789",
+    lastWorkout: "2026-10-06", daysInactive: 7,
+    goal: "Duy trì form", packageName: "Gói 24 buổi",
+    completedSessions: 22, totalSessions: 24,
+    lastWorkoutFocus: "Full Body Maintenance",
+    note: "Sắp hết gói — còn 2 buổi. Cần tư vấn gia hạn hoặc nâng cấp lên gói 36 buổi.",
+    suggestedAction: "Gọi điện tư vấn gia hạn gói tập. Ưu đãi 10% nếu đăng ký trước 20/10.",
+  },
+  {
+    id: 4, name: "Phạm Thị Dung", lastActive: "10 ngày chưa tương tác",
+    avatar: "https://i.pravatar.cc/150?u=4", phone: "0934 567 890",
+    lastWorkout: "2026-10-03", daysInactive: 10,
+    goal: "Giảm mỡ", packageName: "Gói 12 buổi",
+    completedSessions: 3, totalSessions: 12,
+    lastWorkoutFocus: "Full Body HIIT - Cường độ nhẹ",
+    note: "Tạm dừng do bận deadline dự án. Đã hứa quay lại sau 2 tuần (dự kiến 20/10).",
+    suggestedAction: "Nhắn Zalo hỏi thăm tình hình công việc và hẹn ngày quay lại tập.",
+  },
+  {
+    id: 5, name: "Hoàng Văn Em", lastActive: "8 ngày chưa tương tác",
+    avatar: "https://i.pravatar.cc/150?u=5", phone: "0945 678 901",
+    lastWorkout: "2026-10-05", daysInactive: 8,
+    goal: "Tăng sức bền", packageName: "Gói 24 buổi",
+    completedSessions: 12, totalSessions: 24,
+    lastWorkoutFocus: "Long Run 8km - Pace 6:30/km",
+    note: "Đang chuẩn bị cho marathon 10km vào tháng 11. Cần duy trì lịch tập đều đặn.",
+    suggestedAction: "Nhắc lịch tập cuối tuần: long run 10km. Theo dõi HR zone sau chạy.",
+  },
 ];
 
-function StatCard({ label, value, abbrev, color, bg }) {
+function StatCard({ label, value, SvgIcon, color, bg }) {
   return (
-    <div className={`bg-white rounded-xl shadow-sm p-4 flex items-center gap-3 ${bg} dark:bg-gray-800 dark:border dark:border-gray-700`}>
-      <div className={`p-3 rounded-lg ${bg} dark:bg-gray-700 flex items-center justify-center`}>
-        <span className={`${color} font-bold text-2xl`}>{abbrev}</span>
+    <div className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3 dark:bg-gray-800 dark:border dark:border-gray-700">
+      <div className={`p-3 rounded-lg ${bg} dark:bg-gray-700 flex items-center justify-center flex-shrink-0`}>
+        <span className={color}><SvgIcon /></span>
       </div>
-      <div>
-        <Text className="text-sm text-gray-500 dark:text-gray-400">{label}</Text>
+      <div className="min-w-0">
+        <Text className="text-sm text-gray-500 dark:text-gray-400 leading-tight">{label}</Text>
         <Text.Title size="large" className="font-bold text-gray-900 dark:text-white">{value}</Text.Title>
       </div>
     </div>
@@ -53,38 +119,108 @@ function InactiveClientCard({ client, onClick }) {
   );
 }
 
-function InactiveClientDetailView({ client, onClose, onMarkContacted }) {
+function InactiveClientDetailView({ client, onClose, onMarkContacted, onViewFullProfile }) {
+  const progress = Math.round((client.completedSessions / client.totalSessions) * 100);
   return (
     <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
+      {/* Header — matches spacing of clients.jsx & workouts.jsx */}
       <div
-        className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 pr-24"
+        className="bg-white dark:bg-gray-800 px-4 pb-3 border-b border-slate-200 dark:border-gray-700 sticky top-0 z-30 pr-24"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
-        <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={onClose} className="flex-shrink-0">
-          Quay lại
-        </Button>
-        <Avatar size="xlarge" src={client.avatar} alt={client.name} />
-        <div className="flex-1 min-w-0">
-          <Text.Title size="large" className="font-bold text-gray-900 dark:text-white truncate">{client.name}</Text.Title>
-          <Text className="text-gray-500 dark:text-gray-400">{client.phone}</Text>
+        <div className="flex items-center gap-3">
+          <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={onClose} className="flex-shrink-0">
+            Quay lại
+          </Button>
+          <Avatar size="large" src={client.avatar} alt={client.name} className="flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <Text.Title size="large" className="font-bold text-gray-900 dark:text-white truncate">{client.name}</Text.Title>
+            <Text className="text-sm text-gray-500 dark:text-gray-400">{client.phone}</Text>
+          </div>
+          <span className="bg-red-100 text-red-700 border border-red-200 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0">
+            {client.daysInactive} ngày
+          </span>
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <Text className="font-medium text-gray-900 dark:text-white">Trạng thái</Text>
-            <Text className="font-semibold text-gray-900 dark:text-white">{client.lastActive}</Text>
+      {/* Scrollable body */}
+      <div className="p-4 pb-28 space-y-4">
+
+        {/* 3 Summary Pill Boxes — strict grid-cols-3, never wraps */}
+        <div className="grid grid-cols-3 gap-2 w-full">
+          <div className="flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 bg-blue-50 text-blue-700 border border-blue-200">
+            <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">MỤC TIÊU</span>
+            <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{client.goal}</span>
           </div>
-          <div className="flex items-center justify-between mb-2">
-            <Text className="font-medium text-gray-900 dark:text-white">Lần tập cuối</Text>
-            <Text className="font-semibold text-gray-900 dark:text-white">{client.lastWorkout}</Text>
+          <div className="flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">GÓI TẬP</span>
+            <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{client.packageName}</span>
+          </div>
+          <div className="flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 bg-red-50 text-red-700 border border-red-200">
+            <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">TÌNH TRẠNG</span>
+            <span className="text-xs font-bold leading-snug break-words w-full">{client.lastActive}</span>
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose}>Đóng</Button>
-          <Button variant="primary" onClick={onMarkContacted}>Đã liên hệ qua Zalo</Button>
+        {/* Session Progress Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <Text className="font-semibold text-gray-900 dark:text-white text-sm">Tiến độ gói tập</Text>
+            <Text className="font-bold text-gray-900 dark:text-white text-sm">
+              {client.completedSessions}/{client.totalSessions} buổi
+            </Text>
+          </div>
+          <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-blue-600 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">{progress}% hoàn thành</Text>
+        </div>
+
+        {/* Last Workout & Notes Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
+          {/* Last workout date + focus */}
+          <div className="flex items-start justify-between gap-2">
+            <Text className="text-sm font-semibold text-gray-700 dark:text-gray-300">Buổi tập cuối</Text>
+            <div className="text-right min-w-0">
+              <Text className="text-sm font-bold text-gray-900 dark:text-white">{client.lastWorkout}</Text>
+              <Text className="text-xs text-gray-500 dark:text-gray-400 truncate">{client.lastWorkoutFocus}</Text>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-slate-100 dark:border-slate-700" />
+
+          {/* Client note */}
+          <div>
+            <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1.5">Ghi chú học viên</Text>
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+              <Text className="text-xs text-blue-900 dark:text-blue-200 leading-relaxed">{client.note}</Text>
+            </div>
+          </div>
+
+          {/* Suggested action */}
+          <div>
+            <Text className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1.5">Gợi ý hành động</Text>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+              <Text className="text-xs text-amber-900 dark:text-amber-200 leading-relaxed">{client.suggestedAction}</Text>
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-2 pt-1">
+          <Button variant="primary" className="w-full" onClick={onMarkContacted}>
+            Đã liên hệ qua Zalo ✓
+          </Button>
+          <Button variant="secondary" className="w-full" onClick={onViewFullProfile}>
+            Xem hồ sơ đầy đủ →
+          </Button>
+          <Button variant="outline" className="w-full" onClick={onClose}>
+            Quay lại
+          </Button>
         </div>
       </div>
     </Page>
@@ -131,6 +267,7 @@ function DashboardPage() {
           client={selectedClient}
           onClose={() => setSelectedClient(null)}
           onMarkContacted={handleMarkContacted}
+          onViewFullProfile={() => navigate('/clients')}
         />
       ) : (
         <>
@@ -167,7 +304,7 @@ function DashboardPage() {
             <div className="bg-white rounded-xl shadow-sm dark:bg-gray-800 dark:border dark:border-gray-700">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <Text.Title size="large" className="font-bold text-gray-900 dark:text-white">
-                  Học viên cần hỏi thăm (7-10 ngày)
+                  Học viên cần theo dõi (7-10 ngày)
                 </Text.Title>
                 <Button variant="text" size="small" onClick={() => navigate('/clients')}>Xem tất cả</Button>
               </div>
@@ -197,8 +334,8 @@ function DashboardPage() {
                 <Button className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/progress')}>
                   Chỉ số InBody
                 </Button>
-                <Button className="bg-amber-100 border-2 border-amber-300 text-amber-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => setShowAddNote(!showAddNote)}>
-                  Ghi chú nhanh
+                <Button className="bg-amber-100 border-2 border-amber-300 text-amber-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/workouts')}>
+                  Đặt lịch tập mới
                 </Button>
               </div>
             </div>
