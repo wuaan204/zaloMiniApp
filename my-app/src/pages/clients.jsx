@@ -1,5 +1,6 @@
-import { Page, Text, Box, Button, Icon, Modal, Avatar, Input, Select, useNavigate } from "zmp-ui";
+import { Page, Text, Box, Button, Icon, Avatar, Input, Select, useNavigate } from "zmp-ui";
 import React, { useState, useMemo, useEffect } from "react";
+import useScrollRestoration from "../hooks/useScrollRestoration";
 
 // ============================================
 // MOCK DATA - 5 Clients with realistic data
@@ -185,19 +186,30 @@ function ClientCard({ client, onClick }) {
 }
 
 // ============================================
-// Add Client Modal (unchanged)
+// Add Client View (full-page, no Modal)
 // ============================================
-function AddClientModal({ visible, onClose, onSubmit }) {
+function AddClientView({ onClose, onSubmit }) {
   const [formData, setFormData] = useState({
     name: "", phone: "", goal: "Giảm mỡ", packageName: "Gói 24 buổi", totalSessions: 24, notes: "",
   });
   const goals = ["Giảm mỡ","Tăng cơ","Duy trì form","Tăng sức bền","Phục hồi chức năng"];
   const packages = ["Gói 12 buổi","Gói 24 buổi","Gói 36 buổi","Gói 48 buổi"];
-  useEffect(() => { if (visible) setFormData({ name:"", phone:"", goal:"Giảm mỡ", packageName:"Gói 24 buổi", totalSessions:24, notes:"" }); }, [visible]);
-  const handleSubmit = (e) => { e.preventDefault(); if(!formData.name.trim()||!formData.phone.trim()) return; onSubmit({...formData}); onClose(); };
+  const handleSubmit = (e) => { e.preventDefault(); if(!formData.name.trim()||!formData.phone.trim()) return; onSubmit({...formData}); };
   return (
-    <Modal visible={visible} onClose={onClose} title="Thêm học viên mới" width="95%">
-      <form onSubmit={handleSubmit} className="space-y-4 p-2">
+    <div className="p-4 pb-28 space-y-4">
+      {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+      <div
+        className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 pr-24"
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+      >
+        <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={onClose} className="flex-shrink-0">Quay lại</Button>
+        <div className="flex-1 min-w-0">
+          <Text.Title size="large" className="font-bold text-gray-900 dark:text-white truncate">Thêm học viên mới</Text.Title>
+          <Text className="text-sm text-gray-500 dark:text-gray-400">Điền thông tin cơ bản của học viên</Text>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-4">
         <div><Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Họ tên <span className="text-red-500">*</span></Text>
           <Input value={formData.name} onChange={e=>setFormData({...formData,name:e.target.value})} placeholder="Nguyễn Văn A" className="w-full" /></div>
         <div><Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Số điện thoại <span className="text-red-500">*</span></Text>
@@ -212,7 +224,7 @@ function AddClientModal({ visible, onClose, onSubmit }) {
           <textarea value={formData.notes} onChange={e=>setFormData({...formData,notes:e.target.value})} rows={3} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white" placeholder="Ghi chú thêm về học viên..." /></div>
         <div className="flex justify-end gap-2 pt-2"><Button variant="outline" type="button" onClick={onClose}>Hủy</Button><Button variant="primary" type="submit">Thêm học viên</Button></div>
       </form>
-    </Modal>
+    </div>
   );
 }
 
@@ -355,6 +367,12 @@ export default function ClientsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
 
+  // Scroll restoration: `active` = true khi đang ở view danh sách chính
+  const { ref: scrollRef, save: saveScroll } = useScrollRestoration(
+    "clients",
+    selectedClient === null && !showAddModal
+  );
+
   // Filter logic
   const filteredClients = useMemo(() => {
     let result = [...clients];
@@ -388,71 +406,70 @@ export default function ClientsPage() {
     {key:"expiring",label:"Sắp hết gói",count:filterCounts.expiring},
   ];
 
-  // Render Detail View when a client is selected
-  if (selectedClient) {
-    return (
-      <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
-        <ClientDetailView client={selectedClient} onClose={()=>setSelectedClient(null)} onUpdateClient={handleUpdateClient} />
-        <AddClientModal visible={showAddModal} onClose={()=>setShowAddModal(false)} onSubmit={handleAddClient} />
-      </Page>
-    );
-  }
+  // ===== Một <Page> duy nhất cho cả 3 view (danh sách / thêm / chi tiết) =====
+  // => chỉ có 1 scrollbar, và hook tự khôi phục đúng vị trí danh sách khi đóng sub-view.
+  const isAddView = showAddModal && !selectedClient;
 
-  // List View
   return (
-    <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
-      {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
-      <div
-        className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
-        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
-      >
-        <div className="flex items-center gap-2">
-          <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={()=>navigate(-1)}>Quay lại</Button>
-          <div className="flex-1 min-w-0">
-            <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Học viên</Text.Title>
-            <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý học viên</Text>
-          </div>
-        </div>
-      </div>
-
-      {/* Search & Filter */}
-      <div className="p-4 pb-28 space-y-3">
-        {/* Search Input */}
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Icon icon="zi-search" size="18" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="search" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Tìm theo tên hoặc SĐT..." className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-          <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={()=>setShowAddModal(true)}>
-            + Thêm HV
-          </Button>
-        </div>
-
-        {/* Filter Tabs — scrollbar hidden for clean mobile look */}
-        <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {filters.map(f=>(
-            <Button key={f.key} variant={activeFilter===f.key?"primary":"outline"} size="small" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0" onClick={()=>setActiveFilter(f.key)}>
-              {f.label}
-              <span className="ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 dark:bg-white/10 text-center font-bold">{f.count}</span>
-            </Button>
-          ))}
-        </div>
-
-        {/* Client List */}
-        <div className="flex flex-col space-y-4 px-4">
-          {filteredClients.length>0 ? (
-            filteredClients.map(c=><ClientCard key={c.id} client={c} onClick={handleClientClick} />)
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm p-8 text-center dark:bg-slate-800 dark:border dark:border-slate-700">
-              <Icon icon="zi-user-search" size="48" className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-              <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white mb-1">Không tìm thấy học viên</Text.Title>
-              <Text className="text-gray-500 dark:text-gray-400">{searchQuery?"Thử từ khóa khác hoặc xóa bộ lọc":"Chưa có học viên nào. Hãy thêm học viên đầu tiên!"}</Text>
+    <Page ref={scrollRef} className="bg-slate-100 dark:bg-slate-900 min-h-screen">
+      {isAddView ? (
+        <AddClientView onClose={()=>setShowAddModal(false)} onSubmit={(data)=>{ handleAddClient(data); setShowAddModal(false); }} />
+      ) : selectedClient ? (
+        <ClientDetailView client={selectedClient} onClose={()=>setSelectedClient(null)} onUpdateClient={handleUpdateClient} />
+      ) : (
+        <>
+          {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+          <div
+            className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
+            style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+          >
+            <div className="flex items-center gap-2">
+              <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={()=>{ saveScroll(); navigate(-1); }}>Quay lại</Button>
+              <div className="flex-1 min-w-0">
+                <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Học viên</Text.Title>
+                <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý học viên</Text>
+              </div>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      <AddClientModal visible={showAddModal} onClose={()=>setShowAddModal(false)} onSubmit={handleAddClient} />
+          {/* Search & Filter */}
+          <div className="p-4 pb-28 space-y-3">
+            {/* Search Input */}
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Icon icon="zi-search" size="18" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input type="search" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Tìm theo tên hoặc SĐT..." className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={()=>setShowAddModal(true)}>
+                + Thêm HV
+              </Button>
+            </div>
+
+            {/* Filter Tabs — scrollbar hidden for clean mobile look */}
+            <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {filters.map(f=>(
+                <Button key={f.key} variant={activeFilter===f.key?"primary":"outline"} size="small" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0" onClick={()=>setActiveFilter(f.key)}>
+                  {f.label}
+                  <span className="ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 dark:bg-white/10 text-center font-bold">{f.count}</span>
+                </Button>
+              ))}
+            </div>
+
+            {/* Client List */}
+            <div className="flex flex-col space-y-4 px-4">
+              {filteredClients.length>0 ? (
+                filteredClients.map(c=><ClientCard key={c.id} client={c} onClick={handleClientClick} />)
+              ) : (
+                <div className="bg-white rounded-xl shadow-sm p-8 text-center dark:bg-slate-800 dark:border dark:border-slate-700">
+                  <Icon icon="zi-user-search" size="48" className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                  <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white mb-1">Không tìm thấy học viên</Text.Title>
+                  <Text className="text-gray-500 dark:text-gray-400">{searchQuery?"Thử từ khóa khác hoặc xóa bộ lọc":"Chưa có học viên nào. Hãy thêm học viên đầu tiên!"}</Text>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </Page>
   );
 }

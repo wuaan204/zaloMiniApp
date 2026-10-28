@@ -1,5 +1,6 @@
 import { Page, Text, Box, Button, Icon, Input, Select, useNavigate, Avatar } from "zmp-ui";
 import React, { useState, useMemo, useEffect } from "react";
+import useScrollRestoration from "../hooks/useScrollRestoration";
 
 // ============================================
 // MOCK DATA - Workout Sessions across Today, Tomorrow, Past
@@ -641,6 +642,12 @@ export default function WorkoutsPage() {
   const [showAddView, setShowAddView] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
 
+  // Scroll restoration: `active` = true khi đang ở view danh sách chính
+  const { ref: scrollRef, save: saveScroll } = useScrollRestoration(
+    "workouts",
+    !showAddView && selectedSession === null
+  );
+
   // Mock clients for add session dropdown
   const clients = [
     { id: 1, name: "Nguyễn Văn An", phone: "0901 234 567" },
@@ -738,170 +745,164 @@ export default function WorkoutsPage() {
     { key: "completed", label: "Đã hoàn thành", count: filterCounts.completed },
   ];
 
-  // Render Add Session View
-  if (showAddView) {
-    return (
-      <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
+  // Sub-view (thêm buổi tập / chi tiết) và danh sách dùng CHUNG một <Page>
+  // -> chỉ có 1 scrollbar, và hook khôi phục đúng vị trí danh sách khi đóng sub-view.
+  const isAddView = showAddView;
+  const isDetailView = !isAddView && selectedSession !== null;
+
+  return (
+    <Page ref={scrollRef} className="bg-slate-100 dark:bg-slate-900 min-h-screen">
+      {isAddView ? (
         <AddSessionView
           onClose={() => setShowAddView(false)}
           onSubmit={handleAddSession}
           clients={clients}
         />
-      </Page>
-    );
-  }
-
-  // Render Session Detail View
-  if (selectedSession) {
-    return (
-      <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
+      ) : isDetailView ? (
         <SessionDetailView
           session={selectedSession}
           onClose={() => setSelectedSession(null)}
           onUpdateSession={handleUpdateSession}
           clients={clients}
         />
-      </Page>
-    );
-  }
-
-  // Render List View
-  return (
-    <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
-      {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
-      <div
-        className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
-        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
-      >
-        <div className="flex items-center gap-2">
-          <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={() => navigate(-1)}>Quay lại</Button>
-          <div className="flex-1 min-w-0">
-            <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Lịch & Buổi tập</Text.Title>
-            <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý buổi tập học viên</Text>
+      ) : (
+        <>
+          {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+          <div
+            className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
+            style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+          >
+            <div className="flex items-center gap-2">
+              <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={() => { saveScroll(); navigate(-1); }}>Quay lại</Button>
+              <div className="flex-1 min-w-0">
+                <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Lịch & Buổi tập</Text.Title>
+                <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý buổi tập học viên</Text>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Search & Filter */}
-      <div className="p-4 pb-28 space-y-3">
-        {/* Search Input */}
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Icon icon="zi-search" size="18" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Tìm theo tên học viên hoặc nội dung tập..."
-              className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          {/* Search & Filter */}
+          <div className="p-4 pb-28 space-y-3">
+            {/* Search Input */}
+            <div className="flex gap-3">
+              <div className="relative flex-1">
+                <Icon icon="zi-search" size="18" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Tìm theo tên học viên hoặc nội dung tập..."
+                  className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={() => setShowAddView(true)}>
+                + Thêm buổi
+              </Button>
+            </div>
+
+            {/* Filter Tabs — scrollbar hidden for clean mobile look */}
+            <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {filters.map(f => (
+                <Button
+                  key={f.key}
+                  variant={activeFilter === f.key ? "primary" : "outline"}
+                  size="small"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0"
+                  onClick={() => setActiveFilter(f.key)}
+                >
+                  {f.label}
+                  <span className="ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 dark:bg-white/10 text-center font-bold">
+                    {f.count}
+                  </span>
+                </Button>
+              ))}
+            </div>
+
+            {/* Session List - Grouped by Day */}
+            <div className="flex flex-col space-y-6">
+              {/* Today */}
+              {(groupedSessions.today && groupedSessions.today.length > 0) && (
+                <div className="px-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                      <Icon icon="zi-sun" size="16" className="text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Hôm nay ({groupedSessions.today.length})</Text.Title>
+                  </div>
+                  <div className="flex flex-col space-y-4">
+                    {groupedSessions.today.map(s => (
+                      <SessionCard
+                        key={s.id}
+                        session={s}
+                        onClick={handleSessionClick}
+                        onComplete={handleComplete}
+                        onRemindDone={handleRemindDone}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tomorrow */}
+              {(groupedSessions.tomorrow && groupedSessions.tomorrow.length > 0) && (
+                <div className="px-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                      <Icon icon="zi-calendar" size="16" className="text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Ngày mai ({groupedSessions.tomorrow.length})</Text.Title>
+                  </div>
+                  <div className="flex flex-col space-y-4">
+                    {groupedSessions.tomorrow.map(s => (
+                      <SessionCard
+                        key={s.id}
+                        session={s}
+                        onClick={handleSessionClick}
+                        onComplete={handleComplete}
+                        onRemindDone={handleRemindDone}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Past Days */}
+              {(groupedSessions.past && groupedSessions.past.length > 0) && (
+                <div className="px-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                      <Icon icon="zi-history" size="16" className="text-gray-600 dark:text-gray-400" />
+                    </div>
+                    <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Ngày trước ({groupedSessions.past.length})</Text.Title>
+                  </div>
+                  <div className="flex flex-col space-y-4">
+                    {groupedSessions.past.map(s => (
+                      <SessionCard
+                        key={s.id}
+                        session={s}
+                        onClick={handleSessionClick}
+                        onComplete={handleComplete}
+                        onRemindDone={handleRemindDone}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {filteredSessions.length === 0 && (
+                <div className="bg-white rounded-xl shadow-sm p-8 text-center dark:bg-slate-800 dark:border dark:border-slate-700">
+                  <Icon icon="zi-calendar-search" size="48" className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                  <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white mb-1">Không tìm thấy buổi tập</Text.Title>
+                  <Text className="text-gray-500 dark:text-gray-400">
+                    {searchQuery ? "Thử từ khóa khác hoặc xóa bộ lọc" : "Chưa có buổi tập nào. Hãy thêm buổi tập đầu tiên!"}
+                  </Text>
+                </div>
+              )}
+            </div>
           </div>
-          <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={() => setShowAddView(true)}>
-            + Thêm buổi
-          </Button>
-        </div>
-
-        {/* Filter Tabs — scrollbar hidden for clean mobile look */}
-        <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {filters.map(f => (
-            <Button
-              key={f.key}
-              variant={activeFilter === f.key ? "primary" : "outline"}
-              size="small"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0"
-              onClick={() => setActiveFilter(f.key)}
-            >
-              {f.label}
-              <span className="ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 dark:bg-white/10 text-center font-bold">
-                {f.count}
-              </span>
-            </Button>
-          ))}
-        </div>
-
-        {/* Session List - Grouped by Day */}
-        <div className="flex flex-col space-y-6">
-          {/* Today */}
-          {(groupedSessions.today && groupedSessions.today.length > 0) && (
-            <div className="px-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <Icon icon="zi-sun" size="16" className="text-blue-600 dark:text-blue-400" />
-                </div>
-                <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Hôm nay ({groupedSessions.today.length})</Text.Title>
-              </div>
-              <div className="flex flex-col space-y-4">
-                {groupedSessions.today.map(s => (
-                  <SessionCard
-                    key={s.id}
-                    session={s}
-                    onClick={handleSessionClick}
-                    onComplete={handleComplete}
-                    onRemindDone={handleRemindDone}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Tomorrow */}
-          {(groupedSessions.tomorrow && groupedSessions.tomorrow.length > 0) && (
-            <div className="px-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <Icon icon="zi-calendar" size="16" className="text-purple-600 dark:text-purple-400" />
-                </div>
-                <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Ngày mai ({groupedSessions.tomorrow.length})</Text.Title>
-              </div>
-              <div className="flex flex-col space-y-4">
-                {groupedSessions.tomorrow.map(s => (
-                  <SessionCard
-                    key={s.id}
-                    session={s}
-                    onClick={handleSessionClick}
-                    onComplete={handleComplete}
-                    onRemindDone={handleRemindDone}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Past Days */}
-          {(groupedSessions.past && groupedSessions.past.length > 0) && (
-            <div className="px-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                  <Icon icon="zi-history" size="16" className="text-gray-600 dark:text-gray-400" />
-                </div>
-                <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Ngày trước ({groupedSessions.past.length})</Text.Title>
-              </div>
-              <div className="flex flex-col space-y-4">
-                {groupedSessions.past.map(s => (
-                  <SessionCard
-                    key={s.id}
-                    session={s}
-                    onClick={handleSessionClick}
-                    onComplete={handleComplete}
-                    onRemindDone={handleRemindDone}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Empty State */}
-          {filteredSessions.length === 0 && (
-            <div className="bg-white rounded-xl shadow-sm p-8 text-center dark:bg-slate-800 dark:border dark:border-slate-700">
-              <Icon icon="zi-calendar-search" size="48" className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-              <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white mb-1">Không tìm thấy buổi tập</Text.Title>
-              <Text className="text-gray-500 dark:text-gray-400">
-                {searchQuery ? "Thử từ khóa khác hoặc xóa bộ lọc" : "Chưa có buổi tập nào. Hãy thêm buổi tập đầu tiên!"}
-              </Text>
-            </div>
-          )}
-        </div>
-      </div>
+        </>
+      )}
     </Page>
   );
 }

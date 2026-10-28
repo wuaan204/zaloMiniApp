@@ -1,5 +1,6 @@
 import { Page, Text, Box, Avatar, Button, Icon, useNavigate } from "zmp-ui";
 import React, { useState } from "react";
+import useScrollRestoration from "../hooks/useScrollRestoration";
 
 // Mock data for dashboard stats — svgIcon is inline SVG for each card
 const SvgUsers = () => (
@@ -122,7 +123,7 @@ function InactiveClientCard({ client, onClick }) {
 function InactiveClientDetailView({ client, onClose, onMarkContacted, onViewFullProfile }) {
   const progress = Math.round((client.completedSessions / client.totalSessions) * 100);
   return (
-    <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
+    <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
       {/* Header — matches spacing of clients.jsx & workouts.jsx */}
       <div
         className="bg-white dark:bg-gray-800 px-4 pb-3 border-b border-slate-200 dark:border-gray-700 sticky top-0 z-30 pr-24"
@@ -223,7 +224,7 @@ function InactiveClientDetailView({ client, onClose, onMarkContacted, onViewFull
           </Button>
         </div>
       </div>
-    </Page>
+    </div>
   );
 }
 
@@ -232,16 +233,28 @@ function DashboardPage() {
   const [showAddNote, setShowAddNote] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
 
+  // Scroll restoration: `active` = true khi đang ở view danh sách chính
+  const { ref: scrollRef, save: saveScroll } = useScrollRestoration(
+    "dashboard",
+    selectedClient === null
+  );
+
+  // Lưu vị trí cuộn trước khi rời trang -> quay lại sẽ nằm đúng chỗ cũ
+  const goTo = (path) => {
+    saveScroll();
+    navigate(path);
+  };
+
   const handleQuickAction = (action) => {
     switch (action) {
       case 'newClient':
-        navigate('/clients');
+        goTo('/clients');
         break;
       case 'schedule':
-        navigate('/workouts');
+        goTo('/workouts');
         break;
       case 'inbody':
-        navigate('/progress');
+        goTo('/progress');
         break;
       case 'note':
         setShowAddNote(!showAddNote);
@@ -261,13 +274,13 @@ function DashboardPage() {
   };
 
   return (
-    <Page className="bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <Page ref={scrollRef} className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       {selectedClient !== null ? (
         <InactiveClientDetailView
           client={selectedClient}
           onClose={() => setSelectedClient(null)}
           onMarkContacted={handleMarkContacted}
-          onViewFullProfile={() => navigate('/clients')}
+          onViewFullProfile={() => goTo('/clients')}
         />
       ) : (
         <>
@@ -286,13 +299,13 @@ function DashboardPage() {
 
           {/* Sub-header: Action Button Row — sits below the title bar, fully clickable */}
           <div className="px-4 pt-3 pb-1 flex justify-end">
-            <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={() => navigate('/clients')}>
+            <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={() => goTo('/clients')}>
               + Thêm học viên
             </Button>
           </div>
 
-          {/* Content */}
-          <div className="p-4 space-y-6 pb-28 overflow-y-auto">
+          {/* Content — chỉ <Page> cuộn, không lồng thêm vùng cuộn */}
+          <div className="p-4 space-y-6 pb-28">
             {/* Stats Grid */}
             <div className="grid grid-cols-2 gap-3">
               {stats.map((stat, index) => (
@@ -306,7 +319,7 @@ function DashboardPage() {
                 <Text.Title size="large" className="font-bold text-gray-900 dark:text-white">
                   Học viên cần theo dõi (7-10 ngày)
                 </Text.Title>
-                <Button variant="text" size="small" onClick={() => navigate('/clients')}>Xem tất cả</Button>
+                <Button variant="text" size="small" onClick={() => goTo('/clients')}>Xem tất cả</Button>
               </div>
               <div className="p-4 space-y-3">
                 {inactiveClients.map((client) => (
@@ -325,16 +338,16 @@ function DashboardPage() {
             <div className="bg-white rounded-xl shadow-sm p-4 space-y-3 dark:bg-gray-800 dark:border dark:border-gray-700">
               <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Danh mục quản lý</Text.Title>
               <div className="grid grid-cols-2 gap-3">
-                <Button className="bg-blue-100 border-2 border-blue-300 text-blue-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/clients')}>
+                <Button className="bg-blue-100 border-2 border-blue-300 text-blue-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/clients')}>
                   Quản lý học viên
                 </Button>
-                <Button className="bg-indigo-100 border-2 border-indigo-300 text-indigo-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/workouts')}>
+                <Button className="bg-indigo-100 border-2 border-indigo-300 text-indigo-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/workouts')}>
                   Lịch &amp; Buổi tập
                 </Button>
-                <Button className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/progress')}>
+                <Button className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/progress')}>
                   Chỉ số InBody
                 </Button>
-                <Button className="bg-amber-100 border-2 border-amber-300 text-amber-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/workouts')}>
+                <Button className="bg-amber-100 border-2 border-amber-300 text-amber-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/workouts')}>
                   Đặt lịch tập mới
                 </Button>
               </div>
