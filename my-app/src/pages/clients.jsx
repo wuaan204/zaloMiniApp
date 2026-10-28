@@ -1,6 +1,7 @@
 import { Page, Text, Box, Button, Icon, Avatar, Input, Select, useNavigate } from "zmp-ui";
 import React, { useState, useMemo, useEffect } from "react";
 import useScrollRestoration from "../hooks/useScrollRestoration";
+import useSlideOverlay from "../hooks/useSlideOverlay";
 
 // ============================================
 // MOCK DATA - 5 Clients with realistic data
@@ -364,17 +365,14 @@ export default function ClientsPage() {
   const [clients, setClients] = useState(initialClients);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(null);
 
-  // Hướng chuyển view cho animation trượt (forward = mở sub-view, back = quay lại)
-  const [navDirection, setNavDirection] = useState(null);
+  // Overlay trượt chứa view con: { type: "add" } hoặc { type: "detail", client }
+  const panel = useSlideOverlay();
+  const subView = panel.payload;
 
-  // Scroll restoration: `active` = true khi đang ở view danh sách chính
-  const { ref: scrollRef, save: saveScroll } = useScrollRestoration(
-    "clients",
-    selectedClient === null && !showAddModal
-  );
+  // Scroll restoration: danh sách chính KHÔNG bao giờ unmount (overlay phủ lên trên)
+  // nên luôn active -> chỉ khôi phục khi quay về từ trang khác, không bị "giật" khi mở/đóng view con.
+  const { ref: scrollRef, save: saveScroll } = useScrollRestoration("clients");
 
   // Filter logic
   const filteredClients = useMemo(() => {
@@ -399,25 +397,13 @@ export default function ClientsPage() {
   }),[clients]);
 
   const handleAddClient = (nc)=>{ const today="2026-10-14"; setClients(p=>[{...nc,id:Date.now(),completedSessions:0,status:"Đang tập",lastInteractionDate:today,interactionLogs:[],avatar:`https://i.pravatar.cc/150?u=${Date.now()}`},...p]); };
-  const handleUpdateClient = (id,up)=>{ setClients(p=>p.map(c=>c.id===id?{...c,...up}:c)); if(selectedClient?.id===id) setSelectedClient(prev=>prev?{...prev,...up}:null); };
-
-  // Mở / đóng sub-view: chỉ đổi state (không navigate) + bật animation trượt
-  const openClientDetail = (c) => { setNavDirection("forward"); setSelectedClient(c); };
-  const closeClientDetail = () => { setNavDirection("back"); setSelectedClient(null); };
-  const openAddView = () => { setNavDirection("forward"); setShowAddModal(true); };
-  const closeAddView = () => { setNavDirection("back"); setShowAddModal(false); };
-  // Chỉ xử lý animation của chính wrapper (bỏ qua animation bubble từ phần tử con)
-  const handleAnimationEnd = (e) => {
-    if (e.target !== e.currentTarget) return;
-    setNavDirection(null);
+  const handleUpdateClient = (id,up)=>{
+    setClients(p=>p.map(c=>c.id===id?{...c,...up}:c));
+    // Đồng bộ luôn dữ liệu đang hiển thị trong overlay chi tiết
+    panel.setPayload(prev=>prev&&prev.client&&prev.client.id===id?{...prev,client:{...prev.client,...up}}:prev);
   };
-
-  const animationClass =
-    navDirection === "forward"
-      ? "animate-slide-in-right"
-      : navDirection === "back"
-      ? "animate-slide-in-left"
-      : "";
+  const handleClientClick = (c)=>panel.open({ type: "detail", client: c });
+  const handleOpenAdd = ()=>panel.open({ type: "add" });
 
   const filters = [
     {key:"all",label:"Tất cả",count:filterCounts.all},
@@ -426,22 +412,12 @@ export default function ClientsPage() {
     {key:"expiring",label:"Sắp hết gói",count:filterCounts.expiring},
   ];
 
-  // ===== Một <Page> duy nhất cho cả 3 view (danh sách / thêm / chi tiết) =====
-  // => chỉ có 1 scrollbar, và hook tự khôi phục đúng vị trí danh sách khi đóng sub-view.
-  const isAddView = showAddModal && !selectedClient;
-
+  // ===== Một <Page> duy nhất: danh sách chính luôn render (giữ scroll) =====
+  // View con nằm trong overlay `position: fixed` là SIBLING của danh sách,
+  // không lồng vào phần tử có transform => không bị cắt mép / lệch trái.
   return (
     <Page ref={scrollRef} className="bg-slate-100 dark:bg-slate-900 min-h-screen">
-      {isAddView ? (
-        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
-          <AddClientView onClose={closeAddView} onSubmit={(data)=>{ handleAddClient(data); closeAddView(); }} />
-        </div>
-      ) : selectedClient ? (
-        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
-          <ClientDetailView client={selectedClient} onClose={closeClientDetail} onUpdateClient={handleUpdateClient} />
-        </div>
-      ) : (
-        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
+      <div>
           {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
           <div
             className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
@@ -464,7 +440,7 @@ export default function ClientsPage() {
                 <Icon icon="zi-search" size="18" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input type="search" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Tìm theo tên hoặc SĐT..." className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-              <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={openAddView}>
+              <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={handleOpenAdd}>
                 + Thêm HV
               </Button>
             </div>
@@ -482,7 +458,7 @@ export default function ClientsPage() {
             {/* Client List */}
             <div className="flex flex-col space-y-4 px-4">
               {filteredClients.length>0 ? (
-                filteredClients.map(c=><ClientCard key={c.id} client={c} onClick={openClientDetail} />)
+                filteredClients.map(c=><ClientCard key={c.id} client={c} onClick={handleClientClick} />)
               ) : (
                 <div className="bg-white rounded-xl shadow-sm p-8 text-center dark:bg-slate-800 dark:border dark:border-slate-700">
                   <Icon icon="zi-user-search" size="48" className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
@@ -492,6 +468,27 @@ export default function ClientsPage() {
               )}
             </div>
           </div>
+        </div>
+
+      {/* Overlay trượt cho view con (thêm học viên / chi tiết học viên) */}
+      {panel.isVisible && (
+        <div
+          ref={panel.overlayRef}
+          style={panel.overlayStyle}
+          className="slide-overlay bg-slate-100 dark:bg-slate-900 overflow-y-auto pb-28"
+        >
+          {subView.type === "add" ? (
+            <AddClientView
+              onClose={panel.close}
+              onSubmit={(data)=>{ handleAddClient(data); panel.close(); }}
+            />
+          ) : (
+            <ClientDetailView
+              client={subView.client}
+              onClose={panel.close}
+              onUpdateClient={handleUpdateClient}
+            />
+          )}
         </div>
       )}
     </Page>

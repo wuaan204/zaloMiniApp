@@ -1,6 +1,7 @@
 import { Page, Text, Box, Button, Icon, Input, Select, useNavigate, Avatar } from "zmp-ui";
 import React, { useState, useMemo, useEffect } from "react";
 import useScrollRestoration from "../hooks/useScrollRestoration";
+import useSlideOverlay from "../hooks/useSlideOverlay";
 
 // ============================================
 // MOCK DATA - Workout Sessions across Today, Tomorrow, Past
@@ -639,17 +640,14 @@ export default function WorkoutsPage() {
   const [sessions, setSessions] = useState(initialSessions);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
-  const [showAddView, setShowAddView] = useState(false);
-  const [selectedSession, setSelectedSession] = useState(null);
 
-  // Hướng chuyển view cho animation trượt (forward = mở sub-view, back = quay lại)
-  const [navDirection, setNavDirection] = useState(null);
+  // Overlay trượt chứa view con: { type: "add" } hoặc { type: "detail", session }
+  const panel = useSlideOverlay();
+  const subView = panel.payload;
 
-  // Scroll restoration: `active` = true khi đang ở view danh sách chính
-  const { ref: scrollRef, save: saveScroll } = useScrollRestoration(
-    "workouts",
-    !showAddView && selectedSession === null
-  );
+  // Scroll restoration: danh sách chính KHÔNG bao giờ unmount (overlay phủ lên trên)
+  // nên luôn active -> chỉ khôi phục khi quay về từ trang khác, không bị "giật" khi mở/đóng view con.
+  const { ref: scrollRef, save: saveScroll } = useScrollRestoration("workouts");
 
   // Mock clients for add session dropdown
   const clients = [
@@ -726,9 +724,12 @@ export default function WorkoutsPage() {
 
   const handleUpdateSession = (id, updates) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
-    if (selectedSession?.id === id) {
-      setSelectedSession(prev => prev ? { ...prev, ...updates } : null);
-    }
+    // Đồng bộ luôn dữ liệu đang hiển thị trong overlay chi tiết
+    panel.setPayload(prev =>
+      prev && prev.session && prev.session.id === id
+        ? { ...prev, session: { ...prev.session, ...updates } }
+        : prev
+    );
   };
 
   const handleComplete = (id) => {
@@ -739,23 +740,8 @@ export default function WorkoutsPage() {
     handleUpdateSession(id, { status: "Sắp tới" });
   };
 
-  // Mở / đóng sub-view: chỉ đổi state (không navigate) + bật animation trượt
-  const openSessionDetail = (s) => { setNavDirection("forward"); setSelectedSession(s); };
-  const closeSessionDetail = () => { setNavDirection("back"); setSelectedSession(null); };
-  const openAddView = () => { setNavDirection("forward"); setShowAddView(true); };
-  const closeAddView = () => { setNavDirection("back"); setShowAddView(false); };
-  // Chỉ xử lý animation của chính wrapper (bỏ qua animation bubble từ phần tử con)
-  const handleAnimationEnd = (e) => {
-    if (e.target !== e.currentTarget) return;
-    setNavDirection(null);
-  };
-
-  const animationClass =
-    navDirection === "forward"
-      ? "animate-slide-in-right"
-      : navDirection === "back"
-      ? "animate-slide-in-left"
-      : "";
+  const handleSessionClick = (s) => panel.open({ type: "detail", session: s });
+  const handleOpenAdd = () => panel.open({ type: "add" });
 
   const filters = [
     { key: "all", label: "Tất cả", count: filterCounts.all },
@@ -764,32 +750,12 @@ export default function WorkoutsPage() {
     { key: "completed", label: "Đã hoàn thành", count: filterCounts.completed },
   ];
 
-  // Sub-view (thêm buổi tập / chi tiết) và danh sách dùng CHUNG một <Page>
-  // -> chỉ có 1 scrollbar, và hook khôi phục đúng vị trí danh sách khi đóng sub-view.
-  const isAddView = showAddView;
-  const isDetailView = !isAddView && selectedSession !== null;
-
+  // ===== Một <Page> duy nhất: danh sách chính luôn render (giữ scroll) =====
+  // View con nằm trong overlay `position: fixed` là SIBLING của danh sách,
+  // không lồng vào phần tử có transform => không bị cắt mép / lệch trái.
   return (
     <Page ref={scrollRef} className="bg-slate-100 dark:bg-slate-900 min-h-screen">
-      {isAddView ? (
-        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
-          <AddSessionView
-            onClose={closeAddView}
-            onSubmit={(data) => { handleAddSession(data); closeAddView(); }}
-            clients={clients}
-          />
-        </div>
-      ) : isDetailView ? (
-        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
-          <SessionDetailView
-            session={selectedSession}
-            onClose={closeSessionDetail}
-            onUpdateSession={handleUpdateSession}
-            clients={clients}
-          />
-        </div>
-      ) : (
-        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
+      <div>
           {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
           <div
             className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
@@ -818,7 +784,7 @@ export default function WorkoutsPage() {
                   className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={openAddView}>
+              <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={handleOpenAdd}>
                 + Thêm buổi
               </Button>
             </div>
@@ -857,7 +823,7 @@ export default function WorkoutsPage() {
                       <SessionCard
                         key={s.id}
                         session={s}
-                        onClick={openSessionDetail}
+                        onClick={handleSessionClick}
                         onComplete={handleComplete}
                         onRemindDone={handleRemindDone}
                       />
@@ -880,7 +846,7 @@ export default function WorkoutsPage() {
                       <SessionCard
                         key={s.id}
                         session={s}
-                        onClick={openSessionDetail}
+                        onClick={handleSessionClick}
                         onComplete={handleComplete}
                         onRemindDone={handleRemindDone}
                       />
@@ -903,7 +869,7 @@ export default function WorkoutsPage() {
                       <SessionCard
                         key={s.id}
                         session={s}
-                        onClick={openSessionDetail}
+                        onClick={handleSessionClick}
                         onComplete={handleComplete}
                         onRemindDone={handleRemindDone}
                       />
@@ -924,6 +890,29 @@ export default function WorkoutsPage() {
               )}
             </div>
           </div>
+        </div>
+
+      {/* Overlay trượt cho view con (thêm buổi tập / chi tiết buổi tập) */}
+      {panel.isVisible && (
+        <div
+          ref={panel.overlayRef}
+          style={panel.overlayStyle}
+          className="slide-overlay bg-slate-100 dark:bg-slate-900 overflow-y-auto pb-28"
+        >
+          {subView.type === "add" ? (
+            <AddSessionView
+              onClose={panel.close}
+              onSubmit={handleAddSession}
+              clients={clients}
+            />
+          ) : (
+            <SessionDetailView
+              session={subView.session}
+              onClose={panel.close}
+              onUpdateSession={handleUpdateSession}
+              clients={clients}
+            />
+          )}
         </div>
       )}
     </Page>

@@ -1,6 +1,7 @@
 import { Page, Text, Box, Avatar, Button, Icon, useNavigate } from "zmp-ui";
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import useScrollRestoration from "../hooks/useScrollRestoration";
+import useSlideOverlay from "../hooks/useSlideOverlay";
 
 // Mock data for dashboard stats — svgIcon is inline SVG for each card
 const SvgUsers = () => (
@@ -231,17 +232,13 @@ function InactiveClientDetailView({ client, onClose, onMarkContacted, onViewFull
 function DashboardPage() {
   const navigate = useNavigate();
   const [showAddNote, setShowAddNote] = useState(false);
-  const [selectedClient, setSelectedClient] = useState(null);
 
-  // Hướng chuyển view cho animation trượt:
-  // "forward" = mở view chi tiết, "back" = quay lại dashboard, null = không animate
-  const [navDirection, setNavDirection] = useState(null);
+  // Overlay trượt chứa chi tiết học viên: { type: "detail", client }
+  const panel = useSlideOverlay();
 
-  // Scroll restoration: `active` = true khi đang ở view danh sách chính
-  const { ref: scrollRef, save: saveScroll } = useScrollRestoration(
-    "dashboard",
-    selectedClient === null
-  );
+  // Scroll restoration: danh sách chính KHÔNG bao giờ unmount (overlay phủ lên trên)
+  // nên luôn active -> chỉ khôi phục khi quay về từ trang khác, không bị "giật" khi mở/đóng chi tiết.
+  const { ref: scrollRef, save: saveScroll } = useScrollRestoration("dashboard");
 
   // Lưu vị trí cuộn trước khi rời trang -> quay lại sẽ nằm đúng chỗ cũ
   const goTo = (path) => {
@@ -269,153 +266,149 @@ function DashboardPage() {
   };
 
   const handleClientClick = (client) => {
-    setNavDirection("forward");
-    setSelectedClient(client);
-  };
-
-  // Chỉ đóng view con (không navigate) -> hook tự khôi phục đúng vị trí cuộn cũ
-  const closeDetail = () => {
-    setNavDirection("back");
-    setSelectedClient(null);
+    panel.open({ type: "detail", client });
   };
 
   const handleMarkContacted = () => {
     // In a real app, you would call an API to mark as contacted
-    closeDetail();
+    panel.close();
   };
 
-  // Animation chạy xong -> bỏ class để không giữ transform (tránh ảnh hưởng position: fixed)
-  // Chỉ xử lý animation của chính wrapper (bỏ qua animation bubble từ phần tử con)
-  const handleAnimationEnd = (e) => {
-    if (e.target !== e.currentTarget) return;
-    setNavDirection(null);
+  const handleViewFullProfile = () => {
+    panel.close();
+    // Chờ overlay trượt ra hết rồi mới điều hướng: nếu navigate() khi overlay
+    // còn hiển thị, `.zaui-routes-item` nhận transform của route transition và
+    // biến thành containing block của overlay `position: fixed` -> overlay bị
+    // kéo lệch theo. 320ms > 260ms transition + 40ms buffer.
+    setTimeout(() => {
+      goTo('/clients');
+    }, 320);
   };
-
-  const animationClass =
-    navDirection === "forward"
-      ? "animate-slide-in-right"
-      : navDirection === "back"
-      ? "animate-slide-in-left"
-      : "";
 
   return (
     <Page ref={scrollRef} className="bg-gray-50 dark:bg-gray-900 min-h-screen">
-      {selectedClient !== null ? (
-        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
-          <InactiveClientDetailView
-            client={selectedClient}
-            onClose={closeDetail}
-            onMarkContacted={handleMarkContacted}
-            onViewFullProfile={() => goTo('/clients')}
-          />
-        </div>
-      ) : (
-        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
-          {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
-          <div
-            className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
-            style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
-          >
-            <div className="flex items-center">
-              <div className="flex-1 min-w-0">
-                <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Tổng quan</Text.Title>
-                <Text className="text-sm text-gray-500 dark:text-gray-400">Xin chào! Dưới đây là tình hình học viên hôm nay.</Text>
-              </div>
+      {/* Main Dashboard View - Always Rendered, không transform để giữ scroll */}
+      <div>
+        {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+        <div
+          className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
+          style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+        >
+          <div className="flex items-center">
+            <div className="flex-1 min-w-0">
+              <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Tổng quan</Text.Title>
+              <Text className="text-sm text-gray-500 dark:text-gray-400">Xin chào! Dưới đây là tình hình học viên hôm nay.</Text>
             </div>
           </div>
+        </div>
 
-          {/* Sub-header: Action Button Row — sits below the title bar, fully clickable */}
-          <div className="px-4 pt-3 pb-1 flex justify-end">
-            <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={() => goTo('/clients')}>
-              + Thêm học viên
-            </Button>
+        {/* Sub-header: Action Button Row — sits below the title bar, fully clickable */}
+        <div className="px-4 pt-3 pb-1 flex justify-end">
+          <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={() => goTo('/clients')}>
+            + Thêm học viên
+          </Button>
+        </div>
+
+        {/* Content — chỉ <Page> cuộn, không lồng thêm vùng cuộn */}
+        <div className="p-4 space-y-6 pb-28">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {stats.map((stat, index) => (
+              <StatCard key={index} {...stat} />
+            ))}
           </div>
 
-          {/* Content — chỉ <Page> cuộn, không lồng thêm vùng cuộn */}
-          <div className="p-4 space-y-6 pb-28">
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-3">
-              {stats.map((stat, index) => (
-                <StatCard key={index} {...stat} />
+          {/* Inactive Clients Section */}
+          <div className="bg-white rounded-xl shadow-sm dark:bg-gray-800 dark:border dark:border-gray-700">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <Text.Title size="large" className="font-bold text-gray-900 dark:text-white">
+                Học viên cần theo dõi (7-10 ngày)
+              </Text.Title>
+              <Button variant="text" size="small" onClick={() => goTo('/clients')}>Xem tất cả</Button>
+            </div>
+            <div className="p-4 space-y-3">
+              {inactiveClients.map((client) => (
+                <InactiveClientCard key={client.id} client={client} onClick={handleClientClick} />
               ))}
-            </div>
-
-            {/* Inactive Clients Section */}
-            <div className="bg-white rounded-xl shadow-sm dark:bg-gray-800 dark:border dark:border-gray-700">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <Text.Title size="large" className="font-bold text-gray-900 dark:text-white">
-                  Học viên cần theo dõi (7-10 ngày)
-                </Text.Title>
-                <Button variant="text" size="small" onClick={() => goTo('/clients')}>Xem tất cả</Button>
-              </div>
-              <div className="p-4 space-y-3">
-                {inactiveClients.map((client) => (
-                  <InactiveClientCard key={client.id} client={client} onClick={handleClientClick} />
-                ))}
-                {inactiveClients.length === 0 && (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    <Icon icon="zi-check-circle" size="48" className="mx-auto mb-2 text-green-500" />
-                    <Text>Không có học viên cần hỏi thăm. Tuyệt vời!</Text>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Management Menu */}
-            <div className="bg-white rounded-xl shadow-sm p-4 space-y-3 dark:bg-gray-800 dark:border dark:border-gray-700">
-              <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Danh mục quản lý</Text.Title>
-              <div className="grid grid-cols-2 gap-3">
-                <Button className="bg-blue-100 border-2 border-blue-300 text-blue-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/clients')}>
-                  Quản lý học viên
-                </Button>
-                <Button className="bg-indigo-100 border-2 border-indigo-300 text-indigo-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/workouts')}>
-                  Lịch &amp; Buổi tập
-                </Button>
-                <Button className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/progress')}>
-                  Chỉ số InBody
-                </Button>
-                <Button className="bg-amber-100 border-2 border-amber-300 text-amber-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/workouts')}>
-                  Đặt lịch tập mới
-                </Button>
-              </div>
+              {inactiveClients.length === 0 && (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <Icon icon="zi-check-circle" size="48" className="mx-auto mb-2 text-green-500" />
+                  <Text>Không có học viên cần hỏi thăm. Tuyệt vời!</Text>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
 
-      {/* Note Creation Overlay — ngoài wrapper animation để position: fixed luôn đúng */}
-      {showAddNote && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 pointer-events-none">
-          <div className="bg-white rounded-xl shadow-sm p-6 w-full max-w-md pointer-events-all">
-            <div className="flex items-center justify-between pb-2">
-              <Text.Title size="medium" className="font-bold text-gray-900">Thêm ghi chú nhanh</Text.Title>
-              <Button variant="text" size="small" onClick={() => setShowAddNote(false)}>
-                <Icon icon="zi-close" size="20" className="text-gray-500" />
+          {/* Management Menu */}
+          <div className="bg-white rounded-xl shadow-sm p-4 space-y-3 dark:bg-gray-800 dark:border dark:border-gray-700">
+            <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Danh mục quản lý</Text.Title>
+            <div className="grid grid-cols-2 gap-3">
+              <Button className="bg-blue-100 border-2 border-blue-300 text-blue-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/clients')}>
+                Quản lý học viên
+              </Button>
+              <Button className="bg-indigo-100 border-2 border-indigo-300 text-indigo-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/workouts')}>
+                Lịch & Buổi tập
+              </Button>
+              <Button className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/progress')}>
+                Chỉ số InBody
+              </Button>
+              <Button className="bg-amber-100 border-2 border-amber-300 text-amber-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/workouts')}>
+                Đặt lịch tập mới
               </Button>
             </div>
-            <form onSubmit={e => {
-              e.preventDefault();
-              // In a real app, you would save the note
-              setShowAddNote(false);
-            }} className="space-y-4">
-              <div>
-                <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1">Nội dung ghi chú</Text>
-                <textarea
-                  rows={4}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  placeholder="Nhập ghi chú..."
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowAddNote(false)}>
-                  Hủy
-                </Button>
-                <Button variant="primary" onClick={() => setShowAddNote(false)}>
-                  Lưu
-                </Button>
-              </div>
-            </form>
           </div>
+        </div>
+
+        {/* Note Creation Overlay */}
+        {showAddNote && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 pointer-events-none">
+            <div className="bg-white rounded-xl shadow-sm p-6 w-full max-w-md pointer-events-all">
+              <div className="flex items-center justify-between pb-2">
+                <Text.Title size="medium" className="font-bold text-gray-900">Thêm ghi chú nhanh</Text.Title>
+                <Button variant="text" size="small" onClick={() => setShowAddNote(false)}>
+                  <Icon icon="zi-close" size="20" className="text-gray-500" />
+                </Button>
+              </div>
+              <form onSubmit={e => {
+                e.preventDefault();
+                // In a real app, you would save the note
+                setShowAddNote(false);
+              }} className="space-y-4">
+                <div>
+                  <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1">Nội dung ghi chú</Text>
+                  <textarea
+                    rows={4}
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    placeholder="Nhập ghi chú..."
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowAddNote(false)}>
+                    Hủy
+                  </Button>
+                  <Button variant="primary" onClick={() => setShowAddNote(false)}>
+                    Lưu
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Detail View Overlay - Slides in from right (sibling, không transform cha) */}
+      {panel.isVisible && (
+        <div
+          ref={panel.overlayRef}
+          style={panel.overlayStyle}
+          className="slide-overlay bg-slate-100 dark:bg-slate-900 overflow-y-auto pb-28"
+        >
+          <InactiveClientDetailView
+            client={panel.payload.client}
+            onClose={panel.close}
+            onMarkContacted={handleMarkContacted}
+            onViewFullProfile={handleViewFullProfile}
+          />
         </div>
       )}
     </Page>

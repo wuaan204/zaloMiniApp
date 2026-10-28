@@ -11,7 +11,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 //   <Page ref={scrollRef} ...>...</Page>
 //
 // - active = true  -> view danh sách chính: ghi nhớ + khôi phục vị trí
-// - active = false -> view con (chi tiết / form thêm): tự cuộn lên đầu
+// - active = false -> đang mở view con (overlay phủ lên): tạm ngưng ghi nhớ,
+//                     danh sách phía sau vẫn giữ nguyên scrollTop
 
 const STORAGE_PREFIX = "scroll_";
 
@@ -211,33 +212,12 @@ export function useScrollRestoration(key, active = true) {
     };
   }, [key, active]);
 
-  // 3) Mở view con (chi tiết / form thêm) -> đưa view con về đầu trang
+  // 3) Mở view con (chi tiết / form thêm) -> KHÔNG đụng tới vị trí cuộn của danh sách.
+  //    View con giờ nằm trong overlay position: fixed có vùng cuộn riêng
+  //    (xem useSlideOverlay), nên danh sách phía sau giữ nguyên scrollTop.
   useLayoutEffect(() => {
-    if (active) {
-      // Quay lại view danh sách: mở khoá ghi nhớ vị trí
-      suppressRef.current = false;
-      return undefined;
-    }
-
-    let secondFrame = 0;
-    const firstFrame = requestAnimationFrame(() => {
-      secondFrame = requestAnimationFrame(() => {
-        const scroller = resolveScroller(hostRef.current);
-        if (!scroller) return;
-        // Đang ở view con: bỏ qua scroll event do chính mình tạo ra
-        suppressRef.current = true;
-        setScrollTop(scroller, 0);
-        setTimeout(() => {
-          suppressRef.current = false;
-        }, 120);
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(firstFrame);
-      cancelAnimationFrame(secondFrame);
-      suppressRef.current = false;
-    };
+    // Tạm khoá ghi nhớ khi đang ở view con để scroll event không ghi đè
+    suppressRef.current = !active;
   }, [active]);
 
   return { ref: hostRef, save };

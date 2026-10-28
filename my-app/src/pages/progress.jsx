@@ -1,6 +1,7 @@
 import { Page, useNavigate } from "zmp-ui";
 import React, { useMemo, useState } from "react";
 import useScrollRestoration from "../hooks/useScrollRestoration";
+import useSlideOverlay from "../hooks/useSlideOverlay";
 
 // ============================================
 // MOCK DATA - 5 học viên + lịch sử đo InBody
@@ -946,35 +947,13 @@ export default function ProgressPage() {
   const [clients, setClients] = useState(initialClients);
   const [selectedClientId, setSelectedClientId] = useState(initialClients[0].id);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAddView, setShowAddView] = useState(false);
 
-  // Hướng chuyển view cho animation trượt (forward = mở form thêm, back = quay lại)
-  const [navDirection, setNavDirection] = useState(null);
+  // Overlay trượt chứa form thêm bản ghi InBody
+  const panel = useSlideOverlay();
 
-  // Scroll restoration: `active` = true khi đang ở view chính (không phải form thêm)
-  const { ref: scrollRef, save: saveScroll } = useScrollRestoration("progress", !showAddView);
-
-  // Mở / đóng form: chỉ đổi state (không navigate) + bật animation trượt
-  const openAddView = () => {
-    setNavDirection("forward");
-    setShowAddView(true);
-  };
-  const closeAddView = () => {
-    setNavDirection("back");
-    setShowAddView(false);
-  };
-  // Chỉ xử lý animation của chính wrapper (bỏ qua animation bubble từ phần tử con)
-  const handleAnimationEnd = (e) => {
-    if (e.target !== e.currentTarget) return;
-    setNavDirection(null);
-  };
-
-  const animationClass =
-    navDirection === "forward"
-      ? "animate-slide-in-right"
-      : navDirection === "back"
-      ? "animate-slide-in-left"
-      : "";
+  // Scroll restoration: view chính KHÔNG bao giờ unmount (form thêm phủ lên trên)
+  // nên luôn active -> chỉ khôi phục khi quay về từ trang khác.
+  const { ref: scrollRef, save: saveScroll } = useScrollRestoration("progress");
 
   const selectedClient =
     clients.find((c) => c.id === selectedClientId) || clients[0];
@@ -1002,7 +981,7 @@ export default function ProgressPage() {
           : c
       )
     );
-    closeAddView();
+    panel.close();
   };
 
   const handleDeleteRecord = (recordId) => {
@@ -1017,16 +996,8 @@ export default function ProgressPage() {
 
   return (
     <Page ref={scrollRef} className="bg-slate-100 pb-28">
-      {showAddView ? (
-        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
-          <AddRecordView
-            client={selectedClient}
-            onClose={closeAddView}
-            onSubmit={handleAddRecord}
-          />
-        </div>
-      ) : (
-        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
+      {/* View chính luôn render => giữ nguyên vị trí cuộn khi mở/đóng form */}
+      <div>
           <PageHeader
             title="Chỉ số InBody"
             subtitle="Theo dõi tiến độ & hình thể học viên"
@@ -1060,7 +1031,7 @@ export default function ProgressPage() {
               </div>
               <button
                 type="button"
-                onClick={openAddView}
+                onClick={() => panel.open({ type: "add" })}
                 aria-label="Thêm bản ghi InBody"
                 className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm active:bg-blue-700"
               >
@@ -1210,6 +1181,20 @@ export default function ProgressPage() {
               </>
             )}
           </div>
+        </div>
+
+      {/* Overlay trượt cho form thêm bản ghi InBody */}
+      {panel.isVisible && (
+        <div
+          ref={panel.overlayRef}
+          style={panel.overlayStyle}
+          className="slide-overlay bg-slate-100 overflow-y-auto pb-28"
+        >
+          <AddRecordView
+            client={selectedClient}
+            onClose={panel.close}
+            onSubmit={handleAddRecord}
+          />
         </div>
       )}
     </Page>
