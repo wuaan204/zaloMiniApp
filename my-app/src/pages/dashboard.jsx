@@ -233,6 +233,10 @@ function DashboardPage() {
   const [showAddNote, setShowAddNote] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
 
+  // Hướng chuyển view cho animation trượt:
+  // "forward" = mở view chi tiết, "back" = quay lại dashboard, null = không animate
+  const [navDirection, setNavDirection] = useState(null);
+
   // Scroll restoration: `active` = true khi đang ở view danh sách chính
   const { ref: scrollRef, save: saveScroll } = useScrollRestoration(
     "dashboard",
@@ -265,25 +269,48 @@ function DashboardPage() {
   };
 
   const handleClientClick = (client) => {
+    setNavDirection("forward");
     setSelectedClient(client);
+  };
+
+  // Chỉ đóng view con (không navigate) -> hook tự khôi phục đúng vị trí cuộn cũ
+  const closeDetail = () => {
+    setNavDirection("back");
+    setSelectedClient(null);
   };
 
   const handleMarkContacted = () => {
     // In a real app, you would call an API to mark as contacted
-    setSelectedClient(null);
+    closeDetail();
   };
+
+  // Animation chạy xong -> bỏ class để không giữ transform (tránh ảnh hưởng position: fixed)
+  // Chỉ xử lý animation của chính wrapper (bỏ qua animation bubble từ phần tử con)
+  const handleAnimationEnd = (e) => {
+    if (e.target !== e.currentTarget) return;
+    setNavDirection(null);
+  };
+
+  const animationClass =
+    navDirection === "forward"
+      ? "animate-slide-in-right"
+      : navDirection === "back"
+      ? "animate-slide-in-left"
+      : "";
 
   return (
     <Page ref={scrollRef} className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       {selectedClient !== null ? (
-        <InactiveClientDetailView
-          client={selectedClient}
-          onClose={() => setSelectedClient(null)}
-          onMarkContacted={handleMarkContacted}
-          onViewFullProfile={() => goTo('/clients')}
-        />
+        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
+          <InactiveClientDetailView
+            client={selectedClient}
+            onClose={closeDetail}
+            onMarkContacted={handleMarkContacted}
+            onViewFullProfile={() => goTo('/clients')}
+          />
+        </div>
       ) : (
-        <>
+        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
           {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
           <div
             className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
@@ -353,43 +380,43 @@ function DashboardPage() {
               </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Note Creation Overlay */}
-          {showAddNote && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 pointer-events-none">
-              <div className="bg-white rounded-xl shadow-sm p-6 w-full max-w-md pointer-events-all">
-                <div className="flex items-center justify-between pb-2">
-                  <Text.Title size="medium" className="font-bold text-gray-900">Thêm ghi chú nhanh</Text.Title>
-                  <Button variant="text" size="small" onClick={() => setShowAddNote(false)}>
-                    <Icon icon="zi-close" size="20" className="text-gray-500" />
-                  </Button>
-                </div>
-                <form onSubmit={e => {
-                  e.preventDefault();
-                  // In a real app, you would save the note
-                  setShowAddNote(false);
-                }} className="space-y-4">
-                  <div>
-                    <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1">Nội dung ghi chú</Text>
-                    <textarea
-                      rows={4}
-                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                      placeholder="Nhập ghi chú..."
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setShowAddNote(false)}>
-                      Hủy
-                    </Button>
-                    <Button variant="primary" onClick={() => setShowAddNote(false)}>
-                      Lưu
-                    </Button>
-                  </div>
-                </form>
-              </div>
+      {/* Note Creation Overlay — ngoài wrapper animation để position: fixed luôn đúng */}
+      {showAddNote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 pointer-events-none">
+          <div className="bg-white rounded-xl shadow-sm p-6 w-full max-w-md pointer-events-all">
+            <div className="flex items-center justify-between pb-2">
+              <Text.Title size="medium" className="font-bold text-gray-900">Thêm ghi chú nhanh</Text.Title>
+              <Button variant="text" size="small" onClick={() => setShowAddNote(false)}>
+                <Icon icon="zi-close" size="20" className="text-gray-500" />
+              </Button>
             </div>
-          )}
-        </>
+            <form onSubmit={e => {
+              e.preventDefault();
+              // In a real app, you would save the note
+              setShowAddNote(false);
+            }} className="space-y-4">
+              <div>
+                <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1">Nội dung ghi chú</Text>
+                <textarea
+                  rows={4}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  placeholder="Nhập ghi chú..."
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowAddNote(false)}>
+                  Hủy
+                </Button>
+                <Button variant="primary" onClick={() => setShowAddNote(false)}>
+                  Lưu
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </Page>
   );

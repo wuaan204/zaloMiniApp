@@ -948,8 +948,33 @@ export default function ProgressPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddView, setShowAddView] = useState(false);
 
+  // Hướng chuyển view cho animation trượt (forward = mở form thêm, back = quay lại)
+  const [navDirection, setNavDirection] = useState(null);
+
   // Scroll restoration: `active` = true khi đang ở view chính (không phải form thêm)
   const { ref: scrollRef, save: saveScroll } = useScrollRestoration("progress", !showAddView);
+
+  // Mở / đóng form: chỉ đổi state (không navigate) + bật animation trượt
+  const openAddView = () => {
+    setNavDirection("forward");
+    setShowAddView(true);
+  };
+  const closeAddView = () => {
+    setNavDirection("back");
+    setShowAddView(false);
+  };
+  // Chỉ xử lý animation của chính wrapper (bỏ qua animation bubble từ phần tử con)
+  const handleAnimationEnd = (e) => {
+    if (e.target !== e.currentTarget) return;
+    setNavDirection(null);
+  };
+
+  const animationClass =
+    navDirection === "forward"
+      ? "animate-slide-in-right"
+      : navDirection === "back"
+      ? "animate-slide-in-left"
+      : "";
 
   const selectedClient =
     clients.find((c) => c.id === selectedClientId) || clients[0];
@@ -977,7 +1002,7 @@ export default function ProgressPage() {
           : c
       )
     );
-    setShowAddView(false);
+    closeAddView();
   };
 
   const handleDeleteRecord = (recordId) => {
@@ -993,13 +1018,15 @@ export default function ProgressPage() {
   return (
     <Page ref={scrollRef} className="bg-slate-100 pb-28">
       {showAddView ? (
-        <AddRecordView
-          client={selectedClient}
-          onClose={() => setShowAddView(false)}
-          onSubmit={handleAddRecord}
-        />
+        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
+          <AddRecordView
+            client={selectedClient}
+            onClose={closeAddView}
+            onSubmit={handleAddRecord}
+          />
+        </div>
       ) : (
-        <>
+        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
           <PageHeader
             title="Chỉ số InBody"
             subtitle="Theo dõi tiến độ & hình thể học viên"
@@ -1033,7 +1060,7 @@ export default function ProgressPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setShowAddView(true)}
+                onClick={openAddView}
                 aria-label="Thêm bản ghi InBody"
                 className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm active:bg-blue-700"
               >
@@ -1183,7 +1210,7 @@ export default function ProgressPage() {
               </>
             )}
           </div>
-        </>
+        </div>
       )}
     </Page>
   );

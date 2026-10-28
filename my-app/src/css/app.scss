@@ -4,6 +4,11 @@ html, body, #app {
   overflow: hidden;
 }
 
+/* Tránh thanh cuộn ngang tạm thời khi view con trượt vào từ bên phải */
+.zaui-page {
+  overflow-x: hidden;
+}
+
 .page {
   padding: 16px 16px 96px 16px;
 }
@@ -21,4 +26,50 @@ html, body, #app {
 
 .safe-area-top {
   padding-top: env(safe-area-inset-top, 44px);
+}
+
+/* ============================================
+   Slide transitions cho view con (chi tiết / thêm mới)
+   Dùng transform + opacity nên được tăng tốc phần cứng (GPU).
+   ============================================ */
+@keyframes slideInRight {
+  from {
+    transform: translate3d(100%, 0, 0);
+    opacity: 0.4;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translate3d(-30%, 0, 0);
+    opacity: 0.4;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+/* Mở view con: trượt vào từ phải sang trái (giống push page) */
+.animate-slide-in-right {
+  animation: slideInRight 0.26s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Quay lại view danh sách: trượt vào từ trái sang phải (giống pop page) */
+.animate-slide-in-left {
+  animation: slideInLeft 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Tôn trọng cài đặt giảm chuyển động của hệ điều hành */
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-in-right,
+  .animate-slide-in-left {
+    animation: none;
+  }
 }

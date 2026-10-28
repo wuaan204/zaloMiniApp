@@ -642,6 +642,9 @@ export default function WorkoutsPage() {
   const [showAddView, setShowAddView] = useState(false);
   const [selectedSession, setSelectedSession] = useState(null);
 
+  // Hướng chuyển view cho animation trượt (forward = mở sub-view, back = quay lại)
+  const [navDirection, setNavDirection] = useState(null);
+
   // Scroll restoration: `active` = true khi đang ở view danh sách chính
   const { ref: scrollRef, save: saveScroll } = useScrollRestoration(
     "workouts",
@@ -736,7 +739,23 @@ export default function WorkoutsPage() {
     handleUpdateSession(id, { status: "Sắp tới" });
   };
 
-  const handleSessionClick = (s) => setSelectedSession(s);
+  // Mở / đóng sub-view: chỉ đổi state (không navigate) + bật animation trượt
+  const openSessionDetail = (s) => { setNavDirection("forward"); setSelectedSession(s); };
+  const closeSessionDetail = () => { setNavDirection("back"); setSelectedSession(null); };
+  const openAddView = () => { setNavDirection("forward"); setShowAddView(true); };
+  const closeAddView = () => { setNavDirection("back"); setShowAddView(false); };
+  // Chỉ xử lý animation của chính wrapper (bỏ qua animation bubble từ phần tử con)
+  const handleAnimationEnd = (e) => {
+    if (e.target !== e.currentTarget) return;
+    setNavDirection(null);
+  };
+
+  const animationClass =
+    navDirection === "forward"
+      ? "animate-slide-in-right"
+      : navDirection === "back"
+      ? "animate-slide-in-left"
+      : "";
 
   const filters = [
     { key: "all", label: "Tất cả", count: filterCounts.all },
@@ -753,20 +772,24 @@ export default function WorkoutsPage() {
   return (
     <Page ref={scrollRef} className="bg-slate-100 dark:bg-slate-900 min-h-screen">
       {isAddView ? (
-        <AddSessionView
-          onClose={() => setShowAddView(false)}
-          onSubmit={handleAddSession}
-          clients={clients}
-        />
+        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
+          <AddSessionView
+            onClose={closeAddView}
+            onSubmit={(data) => { handleAddSession(data); closeAddView(); }}
+            clients={clients}
+          />
+        </div>
       ) : isDetailView ? (
-        <SessionDetailView
-          session={selectedSession}
-          onClose={() => setSelectedSession(null)}
-          onUpdateSession={handleUpdateSession}
-          clients={clients}
-        />
+        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
+          <SessionDetailView
+            session={selectedSession}
+            onClose={closeSessionDetail}
+            onUpdateSession={handleUpdateSession}
+            clients={clients}
+          />
+        </div>
       ) : (
-        <>
+        <div className={animationClass} onAnimationEnd={handleAnimationEnd}>
           {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
           <div
             className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
@@ -795,7 +818,7 @@ export default function WorkoutsPage() {
                   className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={() => setShowAddView(true)}>
+              <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={openAddView}>
                 + Thêm buổi
               </Button>
             </div>
@@ -834,7 +857,7 @@ export default function WorkoutsPage() {
                       <SessionCard
                         key={s.id}
                         session={s}
-                        onClick={handleSessionClick}
+                        onClick={openSessionDetail}
                         onComplete={handleComplete}
                         onRemindDone={handleRemindDone}
                       />
@@ -857,7 +880,7 @@ export default function WorkoutsPage() {
                       <SessionCard
                         key={s.id}
                         session={s}
-                        onClick={handleSessionClick}
+                        onClick={openSessionDetail}
                         onComplete={handleComplete}
                         onRemindDone={handleRemindDone}
                       />
@@ -880,7 +903,7 @@ export default function WorkoutsPage() {
                       <SessionCard
                         key={s.id}
                         session={s}
-                        onClick={handleSessionClick}
+                        onClick={openSessionDetail}
                         onComplete={handleComplete}
                         onRemindDone={handleRemindDone}
                       />
@@ -901,7 +924,7 @@ export default function WorkoutsPage() {
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
     </Page>
   );
