@@ -1,7 +1,5 @@
 import { Page, Text, Box, Avatar, Button, Icon, useNavigate } from "zmp-ui";
-import React, { useState, useRef, useEffect } from "react";
-import useScrollRestoration from "../hooks/useScrollRestoration";
-import useSlideOverlay from "../hooks/useSlideOverlay";
+import React, { useState } from "react";
 
 // Mock data for dashboard stats — svgIcon is inline SVG for each card
 const SvgUsers = () => (
@@ -229,65 +227,50 @@ function InactiveClientDetailView({ client, onClose, onMarkContacted, onViewFull
   );
 }
 
+// ============================================
+// Trang chính: Tổng quan (Dashboard)
+// ============================================
 function DashboardPage() {
   const navigate = useNavigate();
+
+  // ----- (2) STATE -----
+
+  // Bật/tắt hộp thoại thêm ghi chú nhanh
   const [showAddNote, setShowAddNote] = useState(false);
 
-  // Overlay trượt chứa chi tiết học viên: { type: "detail", client }
-  const panel = useSlideOverlay();
+  // State của lớp trượt (drawer) hiển thị chi tiết học viên:
+  // - selectedClient: học viên vừa bấm (giữ nguyên dữ liệu để nội dung vẫn hiện khi trượt ra)
+  // - isDetailOpen: true = lớp trượt đang mở, false = đã đóng
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // Scroll restoration: danh sách chính KHÔNG bao giờ unmount (overlay phủ lên trên)
-  // nên luôn active -> chỉ khôi phục khi quay về từ trang khác, không bị "giật" khi mở/đóng chi tiết.
-  const { ref: scrollRef, save: saveScroll } = useScrollRestoration("dashboard");
+  // ----- (3) HANDLERS -----
 
-  // Lưu vị trí cuộn trước khi rời trang -> quay lại sẽ nằm đúng chỗ cũ
-  const goTo = (path) => {
-    saveScroll();
-    navigate(path);
+  // Hàm mở màn hình chi tiết học viên (trượt từ phải sang trái)
+  const handleOpenDetail = (client) => {
+    setSelectedClient(client);
+    setIsDetailOpen(true);
   };
 
-  const handleQuickAction = (action) => {
-    switch (action) {
-      case 'newClient':
-        goTo('/clients');
-        break;
-      case 'schedule':
-        goTo('/workouts');
-        break;
-      case 'inbody':
-        goTo('/progress');
-        break;
-      case 'note':
-        setShowAddNote(!showAddNote);
-        break;
-      default:
-        break;
-    }
+  // Hàm đóng màn hình chi tiết (trượt ngược về bên phải). Không xóa selectedClient để nội dung không bị mất khi đang trượt
+  const handleCloseDetail = () => {
+    setIsDetailOpen(false);
   };
 
-  const handleClientClick = (client) => {
-    panel.open({ type: "detail", client });
-  };
-
+  // Bấm "Đã liên hệ qua Zalo": (thực tế sẽ gọi API đánh dấu đã liên hệ) rồi đóng chi tiết
   const handleMarkContacted = () => {
-    // In a real app, you would call an API to mark as contacted
-    panel.close();
+    handleCloseDetail();
   };
 
+  // Bấm "Xem hồ sơ đầy đủ": chuyển sang trang Học viên
   const handleViewFullProfile = () => {
-    panel.close();
-    // Chờ overlay trượt ra hết rồi mới điều hướng: nếu navigate() khi overlay
-    // còn hiển thị, `.zaui-routes-item` nhận transform của route transition và
-    // biến thành containing block của overlay `position: fixed` -> overlay bị
-    // kéo lệch theo. 320ms > 260ms transition + 40ms buffer.
-    setTimeout(() => {
-      goTo('/clients');
-    }, 320);
+    navigate("/clients");
   };
 
+  // ----- (4) GIAO DIỆN -----
   return (
-    <Page ref={scrollRef} className="bg-gray-50 dark:bg-gray-900 min-h-screen">
-      {/* Main Dashboard View - Always Rendered, không transform để giữ scroll */}
+    <Page className="bg-gray-50 dark:bg-gray-900 min-h-screen">
+      {/* Màn hình Tổng quan chính (luôn hiển thị phía sau lớp trượt) */}
       <div>
         {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
         <div
@@ -304,7 +287,7 @@ function DashboardPage() {
 
         {/* Sub-header: Action Button Row — sits below the title bar, fully clickable */}
         <div className="px-4 pt-3 pb-1 flex justify-end">
-          <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={() => goTo('/clients')}>
+          <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={() => navigate('/clients')}>
             + Thêm học viên
           </Button>
         </div>
@@ -324,11 +307,11 @@ function DashboardPage() {
               <Text.Title size="large" className="font-bold text-gray-900 dark:text-white">
                 Học viên cần theo dõi (7-10 ngày)
               </Text.Title>
-              <Button variant="text" size="small" onClick={() => goTo('/clients')}>Xem tất cả</Button>
+              <Button variant="text" size="small" onClick={() => navigate('/clients')}>Xem tất cả</Button>
             </div>
             <div className="p-4 space-y-3">
               {inactiveClients.map((client) => (
-                <InactiveClientCard key={client.id} client={client} onClick={handleClientClick} />
+                <InactiveClientCard key={client.id} client={client} onClick={handleOpenDetail} />
               ))}
               {inactiveClients.length === 0 && (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
@@ -343,16 +326,16 @@ function DashboardPage() {
           <div className="bg-white rounded-xl shadow-sm p-4 space-y-3 dark:bg-gray-800 dark:border dark:border-gray-700">
             <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Danh mục quản lý</Text.Title>
             <div className="grid grid-cols-2 gap-3">
-              <Button className="bg-blue-100 border-2 border-blue-300 text-blue-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/clients')}>
+              <Button className="bg-blue-100 border-2 border-blue-300 text-blue-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/clients')}>
                 Quản lý học viên
               </Button>
-              <Button className="bg-indigo-100 border-2 border-indigo-300 text-indigo-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/workouts')}>
+              <Button className="bg-indigo-100 border-2 border-indigo-300 text-indigo-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/workouts')}>
                 Lịch & Buổi tập
               </Button>
-              <Button className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/progress')}>
+              <Button className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/progress')}>
                 Chỉ số InBody
               </Button>
-              <Button className="bg-amber-100 border-2 border-amber-300 text-amber-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/workouts')}>
+              <Button className="bg-amber-100 border-2 border-amber-300 text-amber-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/workouts')}>
                 Đặt lịch tập mới
               </Button>
             </div>
@@ -396,21 +379,21 @@ function DashboardPage() {
         )}
       </div>
 
-      {/* Detail View Overlay - Slides in from right (sibling, không transform cha) */}
-      {panel.isVisible && (
-        <div
-          ref={panel.overlayRef}
-          style={panel.overlayStyle}
-          className="slide-overlay bg-slate-100 dark:bg-slate-900 overflow-y-auto pb-28"
-        >
+      {/* Lớp trượt hiển thị chi tiết học viên (Luôn nằm trong DOM để chạy CSS transition mượt) */}
+      <div
+        className={`fixed inset-0 w-full h-full bg-slate-100 dark:bg-slate-900 z-50 overflow-y-auto pb-28 transition-transform duration-300 ease-in-out ${
+          isDetailOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
+        }`}
+      >
+        {selectedClient && (
           <InactiveClientDetailView
-            client={panel.payload.client}
-            onClose={panel.close}
+            client={selectedClient}
+            onClose={handleCloseDetail}
             onMarkContacted={handleMarkContacted}
             onViewFullProfile={handleViewFullProfile}
           />
-        </div>
-      )}
+        )}
+      </div>
     </Page>
   );
 }

@@ -1,7 +1,5 @@
 import { Page, useNavigate } from "zmp-ui";
-import React, { useMemo, useState } from "react";
-import useScrollRestoration from "../hooks/useScrollRestoration";
-import useSlideOverlay from "../hooks/useSlideOverlay";
+import React, { useState } from "react";
 
 // ============================================
 // MOCK DATA - 5 học viên + lịch sử đo InBody
@@ -940,68 +938,97 @@ function AddRecordView({ client, onClose, onSubmit }) {
 }
 
 // ============================================
-// MAIN PAGE
+// Trang chính: Chỉ số InBody
 // ============================================
 export default function ProgressPage() {
   const navigate = useNavigate();
+
+  // ----- (2) STATE -----
+
+  // Danh sách học viên (kèm các bản ghi InBody), học viên đang chọn và ô tìm kiếm
   const [clients, setClients] = useState(initialClients);
   const [selectedClientId, setSelectedClientId] = useState(initialClients[0].id);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Overlay trượt chứa form thêm bản ghi InBody
-  const panel = useSlideOverlay();
+  // true = lớp trượt chứa form thêm bản ghi InBody đang mở, false = đã đóng
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  // Scroll restoration: view chính KHÔNG bao giờ unmount (form thêm phủ lên trên)
-  // nên luôn active -> chỉ khôi phục khi quay về từ trang khác.
-  const { ref: scrollRef, save: saveScroll } = useScrollRestoration("progress");
+  // Mỗi lần mở form thì tăng 1 để form được tạo mới (làm trống) và cuộn về đầu trang
+  const [drawerKey, setDrawerKey] = useState(0);
 
-  const selectedClient =
-    clients.find((c) => c.id === selectedClientId) || clients[0];
+  // ----- Dữ liệu tính toán từ state -----
 
-  const records = selectedClient.inbodyRecords; // mới nhất -> cũ nhất
+  // Học viên đang chọn (nếu không tìm thấy thì lấy người đầu tiên)
+  const selectedClient = clients.find((c) => c.id === selectedClientId) || clients[0];
+
+  // Các bản ghi InBody của học viên đang chọn (mới nhất -> cũ nhất)
+  const records = selectedClient.inbodyRecords;
   const latest = records[0] || null;
-  const oldest = records.length > 0 ? records[records.length - 1] : null;
-  const recordsAsc = useMemo(() => [...records].reverse(), [records]);
+  let oldest = null;
+  if (records.length > 0) {
+    oldest = records[records.length - 1];
+  }
 
-  const filteredClients = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return clients;
-    return clients.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) ||
-        c.phone.replace(/\s/g, "").includes(q.replace(/\s/g, ""))
+  // Bản ghi theo thứ tự cũ -> mới để vẽ biểu đồ xu hướng
+  const recordsAsc = [...records].reverse();
+
+  // Lọc danh sách học viên theo từ khóa tìm kiếm (tên hoặc SĐT)
+  let filteredClients = clients;
+  const q = searchQuery.toLowerCase().trim();
+  if (q) {
+    const qPhone = q.replace(/\s/g, "");
+    filteredClients = clients.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.phone.replace(/\s/g, "").includes(qPhone)
     );
-  }, [clients, searchQuery]);
+  }
 
+  // ----- (3) HANDLERS -----
+
+  // Hàm mở form thêm bản ghi InBody (trượt từ phải sang trái)
+  const handleOpenDetail = () => {
+    setDrawerKey(drawerKey + 1);
+    setIsDetailOpen(true);
+  };
+
+  // Hàm đóng form (trượt ngược về bên phải)
+  const handleCloseDetail = () => {
+    setIsDetailOpen(false);
+  };
+
+  // Thêm bản ghi InBody mới vào đầu danh sách của học viên đang chọn, rồi đóng form
   const handleAddRecord = (record) => {
-    setClients((prev) =>
-      prev.map((c) =>
-        c.id === selectedClientId
-          ? { ...c, inbodyRecords: [record, ...c.inbodyRecords] }
-          : c
-      )
+    setClients(
+      clients.map((c) => {
+        if (c.id === selectedClientId) {
+          return { ...c, inbodyRecords: [record, ...c.inbodyRecords] };
+        }
+        return c;
+      })
     );
-    panel.close();
+    handleCloseDetail();
   };
 
+  // Xóa 1 bản ghi InBody của học viên đang chọn
   const handleDeleteRecord = (recordId) => {
-    setClients((prev) =>
-      prev.map((c) =>
-        c.id === selectedClientId
-          ? { ...c, inbodyRecords: c.inbodyRecords.filter((r) => r.id !== recordId) }
-          : c
-      )
+    setClients(
+      clients.map((c) => {
+        if (c.id === selectedClientId) {
+          return { ...c, inbodyRecords: c.inbodyRecords.filter((r) => r.id !== recordId) };
+        }
+        return c;
+      })
     );
   };
 
+  // ----- (4) GIAO DIỆN -----
   return (
-    <Page ref={scrollRef} className="bg-slate-100 pb-28">
-      {/* View chính luôn render => giữ nguyên vị trí cuộn khi mở/đóng form */}
+    <Page className="bg-slate-100 pb-28">
+      {/* Màn hình chính (luôn hiển thị phía sau lớp trượt) */}
       <div>
           <PageHeader
             title="Chỉ số InBody"
             subtitle="Theo dõi tiến độ & hình thể học viên"
-            onBack={() => { saveScroll(); navigate(-1); }}
+            onBack={() => navigate(-1)}
           />
 
           {/* Sub-header: tìm kiếm + nút thêm + bộ chọn học viên */}
@@ -1031,7 +1058,7 @@ export default function ProgressPage() {
               </div>
               <button
                 type="button"
-                onClick={() => panel.open({ type: "add" })}
+                onClick={handleOpenDetail}
                 aria-label="Thêm bản ghi InBody"
                 className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm active:bg-blue-700"
               >
@@ -1183,20 +1210,16 @@ export default function ProgressPage() {
           </div>
         </div>
 
-      {/* Overlay trượt cho form thêm bản ghi InBody */}
-      {panel.isVisible && (
-        <div
-          ref={panel.overlayRef}
-          style={panel.overlayStyle}
-          className="slide-overlay bg-slate-100 overflow-y-auto pb-28"
-        >
-          <AddRecordView
-            client={selectedClient}
-            onClose={panel.close}
-            onSubmit={handleAddRecord}
-          />
+      {/* Lớp trượt hiển thị form thêm bản ghi InBody (Luôn nằm trong DOM để chạy CSS transition mượt) */}
+      <div
+        className={`fixed inset-0 w-full h-full bg-slate-100 z-50 overflow-hidden transition-transform duration-300 ease-in-out ${
+          isDetailOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
+        }`}
+      >
+        <div key={drawerKey} className="w-full h-full overflow-y-auto pb-28">
+          <AddRecordView client={selectedClient} onClose={handleCloseDetail} onSubmit={handleAddRecord} />
         </div>
-      )}
+      </div>
     </Page>
   );
 }

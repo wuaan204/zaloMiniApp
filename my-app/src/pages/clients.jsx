@@ -1,7 +1,5 @@
 import { Page, Text, Box, Button, Icon, Avatar, Input, Select, useNavigate } from "zmp-ui";
-import React, { useState, useMemo, useEffect } from "react";
-import useScrollRestoration from "../hooks/useScrollRestoration";
-import useSlideOverlay from "../hooks/useSlideOverlay";
+import React, { useState, useEffect } from "react";
 
 // ============================================
 // MOCK DATA - 5 Clients with realistic data
@@ -358,139 +356,182 @@ function ClientDetailView({ client, onClose, onUpdateClient }) {
 }
 
 // ============================================
-// Main Clients Page Component
+// Trang chính: Danh sách học viên
 // ============================================
 export default function ClientsPage() {
   const navigate = useNavigate();
+
+  // ----- (2) STATE -----
+
+  // Danh sách học viên, ô tìm kiếm và bộ lọc đang chọn
   const [clients, setClients] = useState(initialClients);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
 
-  // Overlay trượt chứa view con: { type: "add" } hoặc { type: "detail", client }
-  const panel = useSlideOverlay();
-  const subView = panel.payload;
+  // State của lớp trượt (drawer):
+  // - selectedClient: học viên vừa bấm (giữ nguyên dữ liệu để nội dung vẫn hiện khi trượt ra)
+  // - drawerMode: "detail" (xem chi tiết) hoặc "add" (form thêm học viên)
+  // - isDetailOpen: true = lớp trượt đang mở, false = đã đóng
+  // - drawerKey: tăng 1 mỗi lần mở lớp trượt để nội dung được tạo mới (form trống, cuộn về đầu trang)
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [drawerMode, setDrawerMode] = useState("detail");
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [drawerKey, setDrawerKey] = useState(0);
 
-  // Scroll restoration: danh sách chính KHÔNG bao giờ unmount (overlay phủ lên trên)
-  // nên luôn active -> chỉ khôi phục khi quay về từ trang khác, không bị "giật" khi mở/đóng view con.
-  const { ref: scrollRef, save: saveScroll } = useScrollRestoration("clients");
+  // ----- Dữ liệu tính toán từ state (không cần hook phức tạp) -----
 
-  // Filter logic
-  const filteredClients = useMemo(() => {
-    let result = [...clients];
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      result = result.filter(c=>c.name.toLowerCase().includes(q)||c.phone.replace(/\s/g,"").includes(q.replace(/\s/g,"")));
-    }
-    switch(activeFilter){
-      case "active": result=result.filter(c=>c.status==="Đang tập"); break;
-      case "inactive": result=result.filter(c=>getDaysSince(c.lastInteractionDate)>=7); break;
-      case "expiring": result=result.filter(c=>c.status==="Sắp hết gói"); break;
-    }
-    return result;
-  },[clients,searchQuery,activeFilter]);
+  // Lọc danh sách theo từ khóa tìm kiếm
+  let filteredClients = clients;
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase().trim();
+    const qPhone = q.replace(/\s/g, "");
+    filteredClients = filteredClients.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.phone.replace(/\s/g, "").includes(qPhone)
+    );
+  }
 
-  const filterCounts = useMemo(()=>({
-    all:clients.length,
-    active:clients.filter(c=>c.status==="Đang tập").length,
-    inactive:clients.filter(c=>getDaysSince(c.lastInteractionDate)>=7).length,
-    expiring:clients.filter(c=>c.status==="Sắp hết gói").length,
-  }),[clients]);
+  // Lọc tiếp theo tab bộ lọc đang chọn
+  if (activeFilter === "active") {
+    filteredClients = filteredClients.filter((c) => c.status === "Đang tập");
+  } else if (activeFilter === "inactive") {
+    filteredClients = filteredClients.filter((c) => getDaysSince(c.lastInteractionDate) >= 7);
+  } else if (activeFilter === "expiring") {
+    filteredClients = filteredClients.filter((c) => c.status === "Sắp hết gói");
+  }
 
-  const handleAddClient = (nc)=>{ const today="2026-10-14"; setClients(p=>[{...nc,id:Date.now(),completedSessions:0,status:"Đang tập",lastInteractionDate:today,interactionLogs:[],avatar:`https://i.pravatar.cc/150?u=${Date.now()}`},...p]); };
-  const handleUpdateClient = (id,up)=>{
-    setClients(p=>p.map(c=>c.id===id?{...c,...up}:c));
-    // Đồng bộ luôn dữ liệu đang hiển thị trong overlay chi tiết
-    panel.setPayload(prev=>prev&&prev.client&&prev.client.id===id?{...prev,client:{...prev.client,...up}}:prev);
-  };
-  const handleClientClick = (c)=>panel.open({ type: "detail", client: c });
-  const handleOpenAdd = ()=>panel.open({ type: "add" });
-
+  // Các tab bộ lọc kèm số lượng học viên của từng tab
   const filters = [
-    {key:"all",label:"Tất cả",count:filterCounts.all},
-    {key:"active",label:"Đang tập",count:filterCounts.active},
-    {key:"inactive",label:"Cần theo dõi",count:filterCounts.inactive},
-    {key:"expiring",label:"Sắp hết gói",count:filterCounts.expiring},
+    { key: "all", label: "Tất cả", count: clients.length },
+    { key: "active", label: "Đang tập", count: clients.filter((c) => c.status === "Đang tập").length },
+    { key: "inactive", label: "Cần theo dõi", count: clients.filter((c) => getDaysSince(c.lastInteractionDate) >= 7).length },
+    { key: "expiring", label: "Sắp hết gói", count: clients.filter((c) => c.status === "Sắp hết gói").length },
   ];
 
-  // ===== Một <Page> duy nhất: danh sách chính luôn render (giữ scroll) =====
-  // View con nằm trong overlay `position: fixed` là SIBLING của danh sách,
-  // không lồng vào phần tử có transform => không bị cắt mép / lệch trái.
+  // ----- (3) HANDLERS -----
+
+  // Thêm học viên mới vào đầu danh sách
+  const handleAddClient = (newClient) => {
+    const today = "2026-10-14";
+    const clientToAdd = {
+      ...newClient,
+      id: Date.now(),
+      completedSessions: 0,
+      status: "Đang tập",
+      lastInteractionDate: today,
+      interactionLogs: [],
+      avatar: `https://i.pravatar.cc/150?u=${Date.now()}`,
+    };
+    setClients([clientToAdd, ...clients]);
+  };
+
+  // Cập nhật thông tin 1 học viên (cả trong danh sách lẫn màn hình chi tiết đang mở)
+  const handleUpdateClient = (id, updates) => {
+    setClients(clients.map((c) => (c.id === id ? { ...c, ...updates } : c)));
+    if (selectedClient && selectedClient.id === id) {
+      setSelectedClient({ ...selectedClient, ...updates });
+    }
+  };
+
+  // Hàm mở màn hình chi tiết học viên (trượt từ phải sang trái)
+  const handleOpenDetail = (client) => {
+    setDrawerKey(drawerKey + 1);
+    setSelectedClient(client);
+    setDrawerMode("detail");
+    setIsDetailOpen(true);
+  };
+
+  // Hàm mở form thêm học viên (cũng trượt từ phải sang trái)
+  const handleOpenAdd = () => {
+    setDrawerKey(drawerKey + 1);
+    setDrawerMode("add");
+    setIsDetailOpen(true);
+  };
+
+  // Hàm đóng lớp trượt (trượt ngược về bên phải). Không xóa selectedClient để nội dung không bị mất khi đang trượt
+  const handleCloseDetail = () => {
+    setIsDetailOpen(false);
+  };
+
+  // Lưu học viên mới từ form rồi đóng lớp trượt
+  const handleSubmitAdd = (data) => {
+    handleAddClient(data);
+    handleCloseDetail();
+  };
+
+  // ----- (4) GIAO DIỆN -----
   return (
-    <Page ref={scrollRef} className="bg-slate-100 dark:bg-slate-900 min-h-screen">
+    <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
+      {/* Màn hình danh sách chính (luôn hiển thị phía sau lớp trượt) */}
       <div>
-          {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
-          <div
-            className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
-            style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
-          >
-            <div className="flex items-center gap-2">
-              <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={()=>{ saveScroll(); navigate(-1); }}>Quay lại</Button>
-              <div className="flex-1 min-w-0">
-                <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Học viên</Text.Title>
-                <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý học viên</Text>
-              </div>
-            </div>
-          </div>
-
-          {/* Search & Filter */}
-          <div className="p-4 pb-28 space-y-3">
-            {/* Search Input */}
-            <div className="flex gap-3">
-              <div className="relative flex-1">
-                <Icon icon="zi-search" size="18" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input type="search" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Tìm theo tên hoặc SĐT..." className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-              <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={handleOpenAdd}>
-                + Thêm HV
-              </Button>
-            </div>
-
-            {/* Filter Tabs — scrollbar hidden for clean mobile look */}
-            <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {filters.map(f=>(
-                <Button key={f.key} variant={activeFilter===f.key?"primary":"outline"} size="small" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0" onClick={()=>setActiveFilter(f.key)}>
-                  {f.label}
-                  <span className="ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 dark:bg-white/10 text-center font-bold">{f.count}</span>
-                </Button>
-              ))}
-            </div>
-
-            {/* Client List */}
-            <div className="flex flex-col space-y-4 px-4">
-              {filteredClients.length>0 ? (
-                filteredClients.map(c=><ClientCard key={c.id} client={c} onClick={handleClientClick} />)
-              ) : (
-                <div className="bg-white rounded-xl shadow-sm p-8 text-center dark:bg-slate-800 dark:border dark:border-slate-700">
-                  <Icon icon="zi-user-search" size="48" className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-                  <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white mb-1">Không tìm thấy học viên</Text.Title>
-                  <Text className="text-gray-500 dark:text-gray-400">{searchQuery?"Thử từ khóa khác hoặc xóa bộ lọc":"Chưa có học viên nào. Hãy thêm học viên đầu tiên!"}</Text>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-      {/* Overlay trượt cho view con (thêm học viên / chi tiết học viên) */}
-      {panel.isVisible && (
+        {/* Thanh tiêu đề: chừa chỗ cho thanh trạng thái và nút capsule của Zalo */}
         <div
-          ref={panel.overlayRef}
-          style={panel.overlayStyle}
-          className="slide-overlay bg-slate-100 dark:bg-slate-900 overflow-y-auto pb-28"
+          className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
+          style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
         >
-          {subView.type === "add" ? (
-            <AddClientView
-              onClose={panel.close}
-              onSubmit={(data)=>{ handleAddClient(data); panel.close(); }}
-            />
-          ) : (
-            <ClientDetailView
-              client={subView.client}
-              onClose={panel.close}
-              onUpdateClient={handleUpdateClient}
-            />
-          )}
+          <div className="flex items-center gap-2">
+            <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={() => navigate(-1)}>Quay lại</Button>
+            <div className="flex-1 min-w-0">
+              <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Học viên</Text.Title>
+              <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý học viên</Text>
+            </div>
+          </div>
         </div>
-      )}
+
+        <div className="p-4 pb-28 space-y-3">
+          {/* Ô tìm kiếm và nút thêm học viên */}
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Icon icon="zi-search" size="18" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Tìm theo tên hoặc SĐT..." className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={handleOpenAdd}>
+              + Thêm HV
+            </Button>
+          </div>
+
+          {/* Các tab bộ lọc (ẩn thanh cuộn ngang cho gọn) */}
+          <div className="flex gap-2 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {filters.map((f) => (
+              <Button key={f.key} variant={activeFilter === f.key ? "primary" : "outline"} size="small" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0" onClick={() => setActiveFilter(f.key)}>
+                {f.label}
+                <span className="ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 dark:bg-white/10 text-center font-bold">{f.count}</span>
+              </Button>
+            ))}
+          </div>
+
+          {/* Danh sách học viên (hoặc thông báo rỗng) */}
+          <div className="flex flex-col space-y-4 px-4">
+            {filteredClients.length > 0 ? (
+              filteredClients.map((c) => <ClientCard key={c.id} client={c} onClick={handleOpenDetail} />)
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm p-8 text-center dark:bg-slate-800 dark:border dark:border-slate-700">
+                <Icon icon="zi-user-search" size="48" className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white mb-1">Không tìm thấy học viên</Text.Title>
+                <Text className="text-gray-500 dark:text-gray-400">{searchQuery ? "Thử từ khóa khác hoặc xóa bộ lọc" : "Chưa có học viên nào. Hãy thêm học viên đầu tiên!"}</Text>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Lớp trượt hiển thị chi tiết / form thêm (Luôn nằm trong DOM để chạy CSS transition mượt) */}
+      <div
+        className={`fixed inset-0 w-full h-full bg-slate-100 dark:bg-slate-900 z-50 overflow-hidden transition-transform duration-300 ease-in-out ${
+          isDetailOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
+        }`}
+      >
+      <div key={drawerKey} className="w-full h-full overflow-y-auto pb-28">
+        {/* Form thêm học viên */}
+        {drawerMode === "add" && (
+          <AddClientView onClose={handleCloseDetail} onSubmit={handleSubmitAdd} />
+        )}
+
+        {/* Chi tiết học viên */}
+        {drawerMode === "detail" && selectedClient && (
+          <ClientDetailView client={selectedClient} onClose={handleCloseDetail} onUpdateClient={handleUpdateClient} />
+        )}
+      </div>
+      </div>
     </Page>
   );
 }

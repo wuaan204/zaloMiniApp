@@ -22,3 +22,10 @@
 - Only modify the files requested in the current task.
 - Keep components clean, modular, and beginner-friendly.
 - Use mock data in state/constants for UI development before Firebase integration.
+
+## 5. THESIS DEFENSE CODE SIMPLICITY RULES (MANDATORY)
+
+- Write clean, minimal, beginner-friendly React code that is easy to read and explain during a university thesis defense.
+- ONLY use `useState` and `useEffect`. Avoid `useReducer`, `useMemo`, `useCallback`, `useLayoutEffect`, and `requestAnimationFrame`.
+- Use standard Tailwind utility classes (`transition-transform duration-300 translate-x-0 translate-x-full`) instead of complex inline style objects whenever possible.
+- Add brief, clear Vietnamese comments (`// ...`) above state declarations, event handlers, and main JSX sections.

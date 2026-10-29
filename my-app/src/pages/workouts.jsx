@@ -1,7 +1,5 @@
 import { Page, Text, Box, Button, Icon, Input, Select, useNavigate, Avatar } from "zmp-ui";
-import React, { useState, useMemo, useEffect } from "react";
-import useScrollRestoration from "../hooks/useScrollRestoration";
-import useSlideOverlay from "../hooks/useSlideOverlay";
+import React, { useState, useEffect } from "react";
 
 // ============================================
 // MOCK DATA - Workout Sessions across Today, Tomorrow, Past
@@ -633,128 +631,146 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
 }
 
 // ============================================
-// Main Workouts Page Component
+// Dữ liệu mẫu: danh sách học viên cho ô chọn khi thêm buổi tập
+// ============================================
+const clients = [
+  { id: 1, name: "Nguyễn Văn An", phone: "0901 234 567" },
+  { id: 2, name: "Trần Thị Bình", phone: "0912 345 678" },
+  { id: 3, name: "Lê Văn Cường", phone: "0923 456 789" },
+  { id: 4, name: "Phạm Thị Dung", phone: "0934 567 890" },
+  { id: 5, name: "Hoàng Văn Em", phone: "0945 678 901" },
+  { id: 6, name: "Vũ Thị Phượng", phone: "0956 789 012" },
+  { id: 7, name: "Đặng Văn Giang", phone: "0967 890 123" },
+  { id: 8, name: "Bùi Thị Hạnh", phone: "0978 901 234" },
+  { id: 9, name: "Ngô Văn Khải", phone: "0989 012 345" },
+  { id: 10, name: "Dương Thị Lan", phone: "0990 123 456" },
+  { id: 11, name: "Phan Văn Minh", phone: "0901 111 222" },
+  { id: 12, name: "Võ Thị Nga", phone: "0912 222 333" },
+];
+
+// ============================================
+// Trang chính: Lịch & Buổi tập
 // ============================================
 export default function WorkoutsPage() {
   const navigate = useNavigate();
+
+  // ----- (2) STATE -----
+
+  // Danh sách buổi tập, ô tìm kiếm và bộ lọc đang chọn
   const [sessions, setSessions] = useState(initialSessions);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
 
-  // Overlay trượt chứa view con: { type: "add" } hoặc { type: "detail", session }
-  const panel = useSlideOverlay();
-  const subView = panel.payload;
+  // State của lớp trượt (drawer):
+  // - selectedSession: buổi tập vừa bấm (giữ nguyên dữ liệu để nội dung vẫn hiện khi trượt ra)
+  // - drawerMode: "detail" (xem chi tiết) hoặc "add" (form thêm buổi tập)
+  // - isDetailOpen: true = lớp trượt đang mở, false = đã đóng
+  // - drawerKey: tăng 1 mỗi lần mở lớp trượt để nội dung được tạo mới (form trống, cuộn về đầu trang)
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [drawerMode, setDrawerMode] = useState("detail");
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [drawerKey, setDrawerKey] = useState(0);
 
-  // Scroll restoration: danh sách chính KHÔNG bao giờ unmount (overlay phủ lên trên)
-  // nên luôn active -> chỉ khôi phục khi quay về từ trang khác, không bị "giật" khi mở/đóng view con.
-  const { ref: scrollRef, save: saveScroll } = useScrollRestoration("workouts");
+  // ----- Dữ liệu tính toán từ state -----
 
-  // Mock clients for add session dropdown
-  const clients = [
-    { id: 1, name: "Nguyễn Văn An", phone: "0901 234 567" },
-    { id: 2, name: "Trần Thị Bình", phone: "0912 345 678" },
-    { id: 3, name: "Lê Văn Cường", phone: "0923 456 789" },
-    { id: 4, name: "Phạm Thị Dung", phone: "0934 567 890" },
-    { id: 5, name: "Hoàng Văn Em", phone: "0945 678 901" },
-    { id: 6, name: "Vũ Thị Phượng", phone: "0956 789 012" },
-    { id: 7, name: "Đặng Văn Giang", phone: "0967 890 123" },
-    { id: 8, name: "Bùi Thị Hạnh", phone: "0978 901 234" },
-    { id: 9, name: "Ngô Văn Khải", phone: "0989 012 345" },
-    { id: 10, name: "Dương Thị Lan", phone: "0990 123 456" },
-    { id: 11, name: "Phan Văn Minh", phone: "0901 111 222" },
-    { id: 12, name: "Võ Thị Nga", phone: "0912 222 333" },
+  // Sắp xếp buổi tập theo ngày rồi theo giờ
+  let filteredSessions = [...sessions].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date);
+    return a.time.localeCompare(b.time);
+  });
+
+  // Lọc theo từ khóa tìm kiếm (tên học viên hoặc nội dung tập)
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase().trim();
+    filteredSessions = filteredSessions.filter(
+      (s) => s.clientName.toLowerCase().includes(q) || s.focus.toLowerCase().includes(q)
+    );
+  }
+
+  // Lọc theo tab bộ lọc đang chọn
+  if (activeFilter === "today") {
+    filteredSessions = filteredSessions.filter((s) => s.date === today);
+  } else if (activeFilter === "remind") {
+    filteredSessions = filteredSessions.filter((s) => s.status === "Cần nhắc lịch");
+  } else if (activeFilter === "completed") {
+    filteredSessions = filteredSessions.filter((s) => s.status === "Đã hoàn thành");
+  }
+
+  // Gom các buổi tập theo nhóm ngày: today / tomorrow / past
+  const groupedSessions = {};
+  filteredSessions.forEach((s) => {
+    const group = getDayGroup(s.date);
+    if (!groupedSessions[group]) groupedSessions[group] = [];
+    groupedSessions[group].push(s);
+  });
+
+  // Các tab bộ lọc kèm số lượng buổi tập của từng tab
+  const filters = [
+    { key: "all", label: "Tất cả", count: sessions.length },
+    { key: "today", label: "Hôm nay", count: sessions.filter((s) => s.date === today).length },
+    { key: "remind", label: "Cần nhắc lịch", count: sessions.filter((s) => s.status === "Cần nhắc lịch").length },
+    { key: "completed", label: "Đã hoàn thành", count: sessions.filter((s) => s.status === "Đã hoàn thành").length },
   ];
 
-  // Filter logic
-  const filteredSessions = useMemo(() => {
-    let result = [...sessions].sort((a, b) => {
-      // Sort by date first, then by time
-      if (a.date !== b.date) return a.date.localeCompare(b.date);
-      return a.time.localeCompare(b.time);
-    });
+  // ----- (3) HANDLERS -----
 
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      result = result.filter(s =>
-        s.clientName.toLowerCase().includes(q) ||
-        s.focus.toLowerCase().includes(q)
-      );
-    }
-
-    switch (activeFilter) {
-      case "today":
-        result = result.filter(s => s.date === today);
-        break;
-      case "remind":
-        result = result.filter(s => s.status === "Cần nhắc lịch");
-        break;
-      case "completed":
-        result = result.filter(s => s.status === "Đã hoàn thành");
-        break;
-    }
-    return result;
-  }, [sessions, searchQuery, activeFilter]);
-
-  // Group sessions by day
-  const groupedSessions = useMemo(() => {
-    const groups = {};
-    filteredSessions.forEach(s => {
-      const group = getDayGroup(s.date);
-      if (!groups[group]) groups[group] = [];
-      groups[group].push(s);
-    });
-    return groups;
-  }, [filteredSessions]);
-
-  const filterCounts = useMemo(() => ({
-    all: sessions.length,
-    today: sessions.filter(s => s.date === today).length,
-    remind: sessions.filter(s => s.status === "Cần nhắc lịch").length,
-    completed: sessions.filter(s => s.status === "Đã hoàn thành").length,
-  }), [sessions]);
-
+  // Thêm buổi tập mới vào đầu danh sách
   const handleAddSession = (newSession) => {
+    const client = clients.find((c) => c.id === newSession.clientId);
+    let totalSessions = "24";
+    if (client && client.packageName) {
+      const found = client.packageName.match(/\d+/);
+      if (found) totalSessions = found[0];
+    }
     const sessionWithId = {
       ...newSession,
       id: Date.now(),
-      sessionNumber: `Buổi ${newSession.sessionNumber}/${clients.find(c => c.id === newSession.clientId)?.packageName?.match(/\d+/) || "24"}`,
+      sessionNumber: `Buổi ${newSession.sessionNumber}/${totalSessions}`,
     };
-    setSessions(prev => [sessionWithId, ...prev]);
+    setSessions([sessionWithId, ...sessions]);
   };
 
+  // Cập nhật 1 buổi tập (cả trong danh sách lẫn màn hình chi tiết đang mở)
   const handleUpdateSession = (id, updates) => {
-    setSessions(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
-    // Đồng bộ luôn dữ liệu đang hiển thị trong overlay chi tiết
-    panel.setPayload(prev =>
-      prev && prev.session && prev.session.id === id
-        ? { ...prev, session: { ...prev.session, ...updates } }
-        : prev
-    );
+    setSessions(sessions.map((s) => (s.id === id ? { ...s, ...updates } : s)));
+    if (selectedSession && selectedSession.id === id) {
+      setSelectedSession({ ...selectedSession, ...updates });
+    }
   };
 
+  // Đánh dấu buổi tập đã hoàn thành
   const handleComplete = (id) => {
     handleUpdateSession(id, { status: "Đã hoàn thành" });
   };
 
+  // Đánh dấu đã nhắc lịch xong (chuyển về trạng thái "Sắp tới")
   const handleRemindDone = (id) => {
     handleUpdateSession(id, { status: "Sắp tới" });
   };
 
-  const handleSessionClick = (s) => panel.open({ type: "detail", session: s });
-  const handleOpenAdd = () => panel.open({ type: "add" });
+  // Hàm mở màn hình chi tiết buổi tập (trượt từ phải sang trái)
+  const handleOpenDetail = (session) => {
+    setDrawerKey(drawerKey + 1);
+    setSelectedSession(session);
+    setDrawerMode("detail");
+    setIsDetailOpen(true);
+  };
 
-  const filters = [
-    { key: "all", label: "Tất cả", count: filterCounts.all },
-    { key: "today", label: "Hôm nay", count: filterCounts.today },
-    { key: "remind", label: "Cần nhắc lịch", count: filterCounts.remind },
-    { key: "completed", label: "Đã hoàn thành", count: filterCounts.completed },
-  ];
+  // Hàm mở form thêm buổi tập (cũng trượt từ phải sang trái)
+  const handleOpenAdd = () => {
+    setDrawerKey(drawerKey + 1);
+    setDrawerMode("add");
+    setIsDetailOpen(true);
+  };
 
-  // ===== Một <Page> duy nhất: danh sách chính luôn render (giữ scroll) =====
-  // View con nằm trong overlay `position: fixed` là SIBLING của danh sách,
-  // không lồng vào phần tử có transform => không bị cắt mép / lệch trái.
+  // Hàm đóng lớp trượt (trượt ngược về bên phải). Không xóa selectedSession để nội dung không bị mất khi đang trượt
+  const handleCloseDetail = () => {
+    setIsDetailOpen(false);
+  };
+
+  // ----- (4) GIAO DIỆN -----
   return (
-    <Page ref={scrollRef} className="bg-slate-100 dark:bg-slate-900 min-h-screen">
+    <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
       <div>
           {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
           <div
@@ -762,7 +778,7 @@ export default function WorkoutsPage() {
             style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
           >
             <div className="flex items-center gap-2">
-              <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={() => { saveScroll(); navigate(-1); }}>Quay lại</Button>
+              <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={() => navigate(-1)}>Quay lại</Button>
               <div className="flex-1 min-w-0">
                 <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Lịch & Buổi tập</Text.Title>
                 <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý buổi tập học viên</Text>
@@ -823,7 +839,7 @@ export default function WorkoutsPage() {
                       <SessionCard
                         key={s.id}
                         session={s}
-                        onClick={handleSessionClick}
+                        onClick={handleOpenDetail}
                         onComplete={handleComplete}
                         onRemindDone={handleRemindDone}
                       />
@@ -846,7 +862,7 @@ export default function WorkoutsPage() {
                       <SessionCard
                         key={s.id}
                         session={s}
-                        onClick={handleSessionClick}
+                        onClick={handleOpenDetail}
                         onComplete={handleComplete}
                         onRemindDone={handleRemindDone}
                       />
@@ -869,7 +885,7 @@ export default function WorkoutsPage() {
                       <SessionCard
                         key={s.id}
                         session={s}
-                        onClick={handleSessionClick}
+                        onClick={handleOpenDetail}
                         onComplete={handleComplete}
                         onRemindDone={handleRemindDone}
                       />
@@ -892,29 +908,29 @@ export default function WorkoutsPage() {
           </div>
         </div>
 
-      {/* Overlay trượt cho view con (thêm buổi tập / chi tiết buổi tập) */}
-      {panel.isVisible && (
-        <div
-          ref={panel.overlayRef}
-          style={panel.overlayStyle}
-          className="slide-overlay bg-slate-100 dark:bg-slate-900 overflow-y-auto pb-28"
-        >
-          {subView.type === "add" ? (
-            <AddSessionView
-              onClose={panel.close}
-              onSubmit={handleAddSession}
-              clients={clients}
-            />
-          ) : (
+      {/* Lớp trượt hiển thị chi tiết / form thêm (Luôn nằm trong DOM để chạy CSS transition mượt) */}
+      <div
+        className={`fixed inset-0 w-full h-full bg-slate-100 dark:bg-slate-900 z-50 overflow-hidden transition-transform duration-300 ease-in-out ${
+          isDetailOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
+        }`}
+      >
+        <div key={drawerKey} className="w-full h-full overflow-y-auto pb-28">
+          {/* Form thêm buổi tập */}
+          {drawerMode === "add" && (
+            <AddSessionView onClose={handleCloseDetail} onSubmit={handleAddSession} clients={clients} />
+          )}
+
+          {/* Chi tiết buổi tập */}
+          {drawerMode === "detail" && selectedSession && (
             <SessionDetailView
-              session={subView.session}
-              onClose={panel.close}
+              session={selectedSession}
+              onClose={handleCloseDetail}
               onUpdateSession={handleUpdateSession}
               clients={clients}
             />
           )}
         </div>
-      )}
+      </div>
     </Page>
   );
 }
