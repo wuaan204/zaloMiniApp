@@ -1,5 +1,8 @@
-import { Page, Text, Box, Avatar, Button, Icon, useNavigate } from "zmp-ui";
-import React, { useState } from "react";
+import { Page, Text, Avatar, Button, useNavigate } from "zmp-ui";
+import React, { useEffect, useRef } from "react";
+import { BackButton } from "../components/icons";
+import { useAppContext } from "../context/AppContext";
+import { saveScroll, restoreScroll, resetScroll } from "../utils/scroll";
 
 // Mock data for dashboard stats — svgIcon is inline SVG for each card
 const SvgUsers = () => (
@@ -98,6 +101,7 @@ function StatCard({ label, value, SvgIcon, color, bg }) {
   );
 }
 
+// Thẻ hiển thị 1 học viên cần theo dõi
 function InactiveClientCard({ client, onClick }) {
   return (
     <div
@@ -110,34 +114,65 @@ function InactiveClientCard({ client, onClick }) {
         <Text className="text-sm text-gray-500 dark:text-gray-400 truncate">{client.phone}</Text>
       </div>
       <div className="flex items-center gap-2">
-        <span className="bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 rounded-full text-xs font-semibold">
+        <span className="inline-flex items-center justify-center text-center bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 rounded-full text-xs font-semibold">
           {client.lastActive}
         </span>
-        <Icon icon="zi-chevron-right" size="20" className="text-gray-400" />
+        
       </div>
     </div>
   );
 }
 
-function InactiveClientDetailView({ client, onClose, onMarkContacted, onViewFullProfile }) {
+// Trang chi tiết học viên cần theo dõi (route "/dashboard-client")
+export function DashboardClientDetail() {
+  const navigate = useNavigate();
+  const { selectedInactiveClient: client } = useAppContext();
+
+  // Scroll ref riêng biệt cho màn hình này
+  const scrollRef = useRef(null);
+
+  // Màn hình chi tiết luôn bắt đầu từ đầu trang (scrollTop = 0)
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+  }, []);
+
+  // Bấm "Đã liên hệ qua Zalo": (thực tế sẽ gọi API đánh dấu đã liên hệ) rồi quay lại trang trước
+  const handleMarkContacted = () => {
+    navigate(-1);
+  };
+
+  // Bấm "Xem hồ sơ đầy đủ": chuyển sang trang Học viên
+  const handleViewFullProfile = () => {
+    navigate("/clients");
+  };
+
+  // Chưa chọn học viên (ví dụ tải lại trang): hiện nút quay lại
+  if (!client) {
+    return (
+      <Page className="bg-slate-100 dark:bg-slate-900 p-4">
+        <BackButton onClick={() => navigate(-1)} />
+      </Page>
+    );
+  }
+
   const progress = Math.round((client.completedSessions / client.totalSessions) * 100);
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
+    <Page ref={scrollRef} className="bg-slate-100 dark:bg-slate-900">
       {/* Header — matches spacing of clients.jsx & workouts.jsx */}
       <div
         className="bg-white dark:bg-gray-800 px-4 pb-3 border-b border-slate-200 dark:border-gray-700 sticky top-0 z-30 pr-24"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
         <div className="flex items-center gap-3">
-          <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={onClose} className="flex-shrink-0">
-            Quay lại
-          </Button>
+          <BackButton onClick={() => navigate(-1)} />
           <Avatar size="large" src={client.avatar} alt={client.name} className="flex-shrink-0" />
           <div className="flex-1 min-w-0">
             <Text.Title size="large" className="font-bold text-gray-900 dark:text-white truncate">{client.name}</Text.Title>
             <Text className="text-sm text-gray-500 dark:text-gray-400">{client.phone}</Text>
           </div>
-          <span className="bg-red-100 text-red-700 border border-red-200 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0">
+          <span className="items-center justify-center text-center bg-red-100 text-red-700 border border-red-200 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0">
             {client.daysInactive} ngày
           </span>
         </div>
@@ -212,64 +247,60 @@ function InactiveClientDetailView({ client, onClose, onMarkContacted, onViewFull
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-2 pt-1">
-          <Button variant="primary" className="w-full" onClick={onMarkContacted}>
-            Đã liên hệ qua Zalo ✓
+          <Button variant="primary" className="inline-flex items-center justify-center text-center w-full" onClick={handleMarkContacted}>
+            Đã liên hệ qua Zalo
           </Button>
-          <Button variant="secondary" className="w-full" onClick={onViewFullProfile}>
-            Xem hồ sơ đầy đủ →
-          </Button>
-          <Button variant="outline" className="w-full" onClick={onClose}>
-            Quay lại
+          <Button variant="secondary" className="inline-flex items-center justify-center text-center w-full" onClick={handleViewFullProfile}>
+            Xem hồ sơ đầy đủ
           </Button>
         </div>
       </div>
-    </div>
+    </Page>
   );
 }
 
 // ============================================
-// Trang chính: Tổng quan (Dashboard)
+// Trang chính: Tổng quan (route "/")
 // ============================================
 function DashboardPage() {
   const navigate = useNavigate();
 
+  // Lấy hàm lưu học viên đang chọn từ Context dùng chung
+  const { setSelectedInactiveClient } = useAppContext();
+
+  // ----- (2) STATE & REF -----
+  // Scroll ref riêng biệt cho Dashboard, không ảnh hưởng trang khác
+  const scrollRef = useRef(null);
+
   // ----- (2) STATE -----
 
-  // Bật/tắt hộp thoại thêm ghi chú nhanh
-  const [showAddNote, setShowAddNote] = useState(false);
-
-  // State của lớp trượt (drawer) hiển thị chi tiết học viên:
-  // - selectedClient: học viên vừa bấm (giữ nguyên dữ liệu để nội dung vẫn hiện khi trượt ra)
-  // - isDetailOpen: true = lớp trượt đang mở, false = đã đóng
-  const [selectedClient, setSelectedClient] = useState(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  // Khi vào trang: khôi phục vị trí cuộn đã lưu (nếu có)
+  useEffect(() => {
+    return restoreScroll("scroll_dashboard", scrollRef);
+  }, []);
 
   // ----- (3) HANDLERS -----
 
-  // Hàm mở màn hình chi tiết học viên (trượt từ phải sang trái)
+  // Chuyển sang trang khác: lưu vị trí cuộn trước để khi bấm Back vẫn nằm đúng chỗ cũ
+  const goTo = (path) => {
+    saveScroll("scroll_dashboard", scrollRef);
+    // Khi sang trang chính khác, xóa vị trí cuộn cũ để trang đó luôn mở từ đầu trang (scrollTop = 0)
+    if (path === "/clients") resetScroll("scroll_clients");
+    if (path === "/workouts") resetScroll("scroll_workouts");
+    if (path === "/progress") resetScroll("scroll_progress");
+    navigate(path);
+  };
+
+  // Bấm vào 1 học viên cần theo dõi: lưu vào Context rồi chuyển sang trang chi tiết
   const handleOpenDetail = (client) => {
-    setSelectedClient(client);
-    setIsDetailOpen(true);
-  };
-
-  // Hàm đóng màn hình chi tiết (trượt ngược về bên phải). Không xóa selectedClient để nội dung không bị mất khi đang trượt
-  const handleCloseDetail = () => {
-    setIsDetailOpen(false);
-  };
-
-  // Bấm "Đã liên hệ qua Zalo": (thực tế sẽ gọi API đánh dấu đã liên hệ) rồi đóng chi tiết
-  const handleMarkContacted = () => {
-    handleCloseDetail();
-  };
-
-  // Bấm "Xem hồ sơ đầy đủ": chuyển sang trang Học viên
-  const handleViewFullProfile = () => {
-    navigate("/clients");
+    saveScroll("scroll_dashboard", scrollRef);
+    setSelectedInactiveClient(client);
+    navigate("/dashboard-client");
   };
 
   // ----- (4) GIAO DIỆN -----
   return (
-    <Page className="bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <Page ref={scrollRef} className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* Màn hình Tổng quan chính (luôn hiển thị phía sau lớp trượt) */}
       <div>
         {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
@@ -287,7 +318,7 @@ function DashboardPage() {
 
         {/* Sub-header: Action Button Row — sits below the title bar, fully clickable */}
         <div className="px-4 pt-3 pb-1 flex justify-end">
-          <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={() => navigate('/clients')}>
+          <Button className="inline-flex items-center justify-center text-center" variant="primary" size="small" onClick={() => goTo('/clients')}>
             + Thêm học viên
           </Button>
         </div>
@@ -307,7 +338,7 @@ function DashboardPage() {
               <Text.Title size="large" className="font-bold text-gray-900 dark:text-white">
                 Học viên cần theo dõi (7-10 ngày)
               </Text.Title>
-              <Button variant="text" size="small" onClick={() => navigate('/clients')}>Xem tất cả</Button>
+              <Button className="inline-flex items-center justify-center text-center" variant="text" size="small" onClick={() => goTo('/clients')}>Xem tất cả</Button>
             </div>
             <div className="p-4 space-y-3">
               {inactiveClients.map((client) => (
@@ -315,7 +346,7 @@ function DashboardPage() {
               ))}
               {inactiveClients.length === 0 && (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  <Icon icon="zi-check-circle" size="48" className="mx-auto mb-2 text-green-500" />
+                  
                   <Text>Không có học viên cần hỏi thăm. Tuyệt vời!</Text>
                 </div>
               )}
@@ -326,73 +357,21 @@ function DashboardPage() {
           <div className="bg-white rounded-xl shadow-sm p-4 space-y-3 dark:bg-gray-800 dark:border dark:border-gray-700">
             <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Danh mục quản lý</Text.Title>
             <div className="grid grid-cols-2 gap-3">
-              <Button className="bg-blue-100 border-2 border-blue-300 text-blue-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/clients')}>
+              <Button className="bg-blue-100 border-2 border-blue-300 text-blue-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/clients')}>
                 Quản lý học viên
               </Button>
-              <Button className="bg-indigo-100 border-2 border-indigo-300 text-indigo-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/workouts')}>
+              <Button className="bg-indigo-100 border-2 border-indigo-300 text-indigo-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/workouts')}>
                 Lịch & Buổi tập
               </Button>
-              <Button className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/progress')}>
+              <Button className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/progress')}>
                 Chỉ số InBody
               </Button>
-              <Button className="bg-amber-100 border-2 border-amber-300 text-amber-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => navigate('/workouts')}>
+              <Button className="bg-amber-100 border-2 border-amber-300 text-amber-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/workouts')}>
                 Đặt lịch tập mới
               </Button>
             </div>
           </div>
         </div>
-
-        {/* Note Creation Overlay */}
-        {showAddNote && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 pointer-events-none">
-            <div className="bg-white rounded-xl shadow-sm p-6 w-full max-w-md pointer-events-all">
-              <div className="flex items-center justify-between pb-2">
-                <Text.Title size="medium" className="font-bold text-gray-900">Thêm ghi chú nhanh</Text.Title>
-                <Button variant="text" size="small" onClick={() => setShowAddNote(false)}>
-                  <Icon icon="zi-close" size="20" className="text-gray-500" />
-                </Button>
-              </div>
-              <form onSubmit={e => {
-                e.preventDefault();
-                // In a real app, you would save the note
-                setShowAddNote(false);
-              }} className="space-y-4">
-                <div>
-                  <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1">Nội dung ghi chú</Text>
-                  <textarea
-                    rows={4}
-                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                    placeholder="Nhập ghi chú..."
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setShowAddNote(false)}>
-                    Hủy
-                  </Button>
-                  <Button variant="primary" onClick={() => setShowAddNote(false)}>
-                    Lưu
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Lớp trượt hiển thị chi tiết học viên (Luôn nằm trong DOM để chạy CSS transition mượt) */}
-      <div
-        className={`fixed inset-0 w-full h-full bg-slate-100 dark:bg-slate-900 z-50 overflow-y-auto pb-28 transition-transform duration-300 ease-in-out ${
-          isDetailOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
-        }`}
-      >
-        {selectedClient && (
-          <InactiveClientDetailView
-            client={selectedClient}
-            onClose={handleCloseDetail}
-            onMarkContacted={handleMarkContacted}
-            onViewFullProfile={handleViewFullProfile}
-          />
-        )}
       </div>
     </Page>
   );

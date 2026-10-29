@@ -1,177 +1,14 @@
 import { Page, useNavigate } from "zmp-ui";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { BackButton } from "../components/icons";
+import { useAppContext } from "../context/AppContext";
+import { saveScroll, restoreScroll } from "../utils/scroll";
 
 // ============================================
-// MOCK DATA - 5 học viên + lịch sử đo InBody
-// (mỗi học viên có >= 3 bản ghi, MỚI NHẤT đứng đầu)
+// Dữ liệu học viên + lịch sử đo InBody nằm trong src/context/AppContext.jsx
+// Cấu trúc file: (1) Hàm hỗ trợ, (2) State, (3) Handlers, (4) Giao diện
 // height: chiều cao mặc định (cm) dùng để tính BMI tự động
 // ============================================
-const initialClients = [
-  {
-    id: 1,
-    name: "Nguyễn Văn An",
-    phone: "0901 234 567",
-    goal: "Giảm mỡ",
-    height: 172,
-    inbodyRecords: [
-      {
-        id: 101, date: "20/10/2026", height: 172, weight: 74.2, inbodyScore: 76,
-        smm: 32.4, bodyFatMass: 16.9, pbf: 22.8, tbw: 40.8,
-        bmi: 25.1, bmr: 1605, visceralFat: 9,
-        waist: 88, hip: 98, chest: 102,
-        note: "Giảm tốt, mỡ nội tạng xuống 1 cấp. Duy trì cardio 3 buổi/tuần và siết carb buổi tối.",
-      },
-      {
-        id: 102, date: "05/10/2026", height: 172, weight: 75.6, inbodyScore: 73,
-        smm: 32.0, bodyFatMass: 18.3, pbf: 24.2, tbw: 41.0,
-        bmi: 25.6, bmr: 1600, visceralFat: 10,
-        waist: 90, hip: 99, chest: 102,
-        note: "Cơ xương tăng nhẹ, mỡ giảm đều. Tăng thêm 1 buổi HIIT mỗi tuần.",
-      },
-      {
-        id: 103, date: "20/09/2026", height: 172, weight: 76.8, inbodyScore: 70,
-        smm: 31.6, bodyFatMass: 19.7, pbf: 25.6, tbw: 41.1,
-        bmi: 26.0, bmr: 1592, visceralFat: 11,
-        waist: 92, hip: 100, chest: 103,
-        note: "Bắt đầu siết dinh dưỡng, ngủ chưa đủ giấc nên cần nhắc khách đi ngủ sớm.",
-      },
-      {
-        id: 104, date: "05/09/2026", height: 172, weight: 78.0, inbodyScore: 67,
-        smm: 31.2, bodyFatMass: 21.1, pbf: 27.0, tbw: 41.2,
-        bmi: 26.4, bmr: 1585, visceralFat: 12,
-        waist: 94, hip: 101, chest: 104,
-        note: "Đo lần đầu khi bắt đầu gói tập. Thể trạng trung bình, ưu tiên giảm mỡ.",
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: "Trần Thị Bình",
-    phone: "0912 345 678",
-    goal: "Tăng cơ",
-    height: 163,
-    inbodyRecords: [
-      {
-        id: 201, date: "18/10/2026", height: 163, weight: 55.4, inbodyScore: 78,
-        smm: 23.1, bodyFatMass: 13.3, pbf: 24.0, tbw: 30.5,
-        bmi: 20.9, bmr: 1280, visceralFat: 6,
-        waist: 68, hip: 94, chest: 86,
-        note: "Tăng 0.4kg cơ trong 2 tuần, rất tốt. Giữ protein 2g/kg cân nặng và ngủ 7-8 tiếng.",
-      },
-      {
-        id: 202, date: "02/10/2026", height: 163, weight: 55.0, inbodyScore: 76,
-        smm: 22.7, bodyFatMass: 13.5, pbf: 24.6, tbw: 30.3,
-        bmi: 20.7, bmr: 1265, visceralFat: 6,
-        waist: 68, hip: 94, chest: 86,
-        note: "Sức mạnh squat tăng, cơ mông phát triển rõ. Tăng tạ thêm 2.5kg mỗi tuần.",
-      },
-      {
-        id: 203, date: "15/09/2026", height: 163, weight: 54.2, inbodyScore: 74,
-        smm: 22.2, bodyFatMass: 13.7, pbf: 25.3, tbw: 29.8,
-        bmi: 20.4, bmr: 1248, visceralFat: 7,
-        waist: 69, hip: 93, chest: 85,
-        note: "Ăn chưa đủ bữa sáng, cần bổ sung thêm tinh bột tốt trước buổi tập.",
-      },
-      {
-        id: 204, date: "01/09/2026", height: 163, weight: 53.6, inbodyScore: 72,
-        smm: 21.8, bodyFatMass: 13.9, pbf: 26.0, tbw: 29.5,
-        bmi: 20.2, bmr: 1230, visceralFat: 7,
-        waist: 70, hip: 93, chest: 85,
-        note: "Đo lần đầu. Mục tiêu tăng cơ nạc, hạn chế tăng mỡ.",
-      },
-    ],
-  },
-  {
-    id: 3,
-    name: "Lê Văn Cường",
-    phone: "0923 456 789",
-    goal: "Duy trì form",
-    height: 170,
-    inbodyRecords: [
-      {
-        id: 301, date: "14/10/2026", height: 170, weight: 72.0, inbodyScore: 82,
-        smm: 33.8, bodyFatMass: 11.7, pbf: 16.2, tbw: 42.5,
-        bmi: 24.9, bmr: 1668, visceralFat: 6,
-        waist: 82, hip: 96, chest: 104,
-        note: "Chỉ số ổn định, form giữ tốt. Có thể giảm 1 buổi cardio để dành thời gian cho mobility.",
-      },
-      {
-        id: 302, date: "30/09/2026", height: 170, weight: 72.4, inbodyScore: 81,
-        smm: 33.5, bodyFatMass: 12.2, pbf: 16.8, tbw: 42.4,
-        bmi: 25.1, bmr: 1665, visceralFat: 6,
-        waist: 82, hip: 96, chest: 104,
-        note: "Duy trì tốt. Chú ý giãn cơ hông vì khách làm việc ngồi nhiều.",
-      },
-      {
-        id: 303, date: "12/09/2026", height: 170, weight: 71.8, inbodyScore: 82,
-        smm: 33.6, bodyFatMass: 11.5, pbf: 16.0, tbw: 42.6,
-        bmi: 24.8, bmr: 1670, visceralFat: 6,
-        waist: 81, hip: 96, chest: 104,
-        note: "Kiểm tra định kỳ. Toàn bộ chỉ số trong ngưỡng an toàn.",
-      },
-    ],
-  },
-  {
-    id: 4,
-    name: "Phạm Thị Dung",
-    phone: "0934 567 890",
-    goal: "Giảm mỡ",
-    height: 158,
-    inbodyRecords: [
-      {
-        id: 401, date: "10/10/2026", height: 158, weight: 63.5, inbodyScore: 68,
-        smm: 22.0, bodyFatMass: 20.6, pbf: 32.5, tbw: 32.2,
-        bmi: 25.4, bmr: 1295, visceralFat: 11,
-        waist: 84, hip: 102, chest: 94,
-        note: "Tạm dừng 2 tuần nên mỡ tăng nhẹ trở lại. Khi quay lại sẽ tập nhẹ, tránh quá tải.",
-      },
-      {
-        id: 402, date: "26/09/2026", height: 158, weight: 64.2, inbodyScore: 66,
-        smm: 21.8, bodyFatMass: 21.3, pbf: 33.2, tbw: 32.4,
-        bmi: 25.7, bmr: 1292, visceralFat: 11,
-        waist: 85, hip: 103, chest: 95,
-        note: "Giảm mỡ chậm nhưng đều. Đi bộ 6000 bước/ngày ngoài giờ tập.",
-      },
-      {
-        id: 403, date: "12/09/2026", height: 158, weight: 65.0, inbodyScore: 64,
-        smm: 21.5, bodyFatMass: 22.1, pbf: 34.0, tbw: 32.6,
-        bmi: 26.0, bmr: 1288, visceralFat: 12,
-        waist: 87, hip: 104, chest: 95,
-        note: "Đo lần đầu sau khi khám sức khỏe. Ưu tiên giảm mỡ nội tạng trước.",
-      },
-    ],
-  },
-  {
-    id: 5,
-    name: "Hoàng Văn Em",
-    phone: "0945 678 901",
-    goal: "Tăng sức bền",
-    height: 176,
-    inbodyRecords: [
-      {
-        id: 501, date: "16/10/2026", height: 176, weight: 68.4, inbodyScore: 84,
-        smm: 35.2, bodyFatMass: 12.3, pbf: 18.0, tbw: 42.0,
-        bmi: 22.1, bmr: 1580, visceralFat: 5,
-        waist: 78, hip: 94, chest: 98,
-        note: "Chuẩn bị marathon 10km. Cơ xương giữ tốt, mỡ giảm nhẹ đúng kế hoạch.",
-      },
-      {
-        id: 502, date: "01/10/2026", height: 176, weight: 68.9, inbodyScore: 83,
-        smm: 34.8, bodyFatMass: 12.8, pbf: 18.6, tbw: 42.1,
-        bmi: 22.2, bmr: 1575, visceralFat: 5,
-        waist: 79, hip: 94, chest: 98,
-        note: "Long run 8km ổn. Tăng carb trước các buổi chạy dài.",
-      },
-      {
-        id: 503, date: "18/09/2026", height: 176, weight: 69.5, inbodyScore: 82,
-        smm: 34.5, bodyFatMass: 13.3, pbf: 19.2, tbw: 42.3,
-        bmi: 22.4, bmr: 1572, visceralFat: 6,
-        waist: 79, hip: 95, chest: 98,
-        note: "Đo lần đầu của chu kỳ luyện marathon. Nền tảng sức bền khá tốt.",
-      },
-    ],
-  },
-];
 
 // ============================================
 // CẤU HÌNH 3 CHỈ SỐ CHÍNH (dùng cho ô tổng quan + biểu đồ)
@@ -303,21 +140,14 @@ const CalendarIcon = ({ className = "w-3.5 h-3.5 text-slate-400" }) => (
 // ============================================
 // HEADER DÙNG CHUNG (an toàn trên mobile)
 // ============================================
-function PageHeader({ title, subtitle, onBack, backLabel = "Quay lại" }) {
+function PageHeader({ title, subtitle, onBack }) {
   return (
     <div
       className="bg-white border-b border-gray-200 px-4 pb-3 sticky top-0 z-30 pr-24"
       style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
     >
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label={backLabel}
-          className="flex-shrink-0 w-9 h-9 rounded-full bg-blue-600 active:bg-blue-700 flex items-center justify-center shadow-sm"
-        >
-          <BackIcon />
-        </button>
+        <BackButton onClick={onBack} />
         <div className="flex-1 min-w-0">
           <h1 className="text-lg font-bold text-gray-900 leading-tight truncate">{title}</h1>
           <p className="text-xs text-gray-500 truncate">{subtitle}</p>
@@ -382,7 +212,7 @@ function TrendChart({ recordsAsc }) {
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
       <div className="flex items-start justify-between gap-2">
         <h2 className="text-sm font-bold text-slate-900 leading-snug">Biểu đồ biến chuyển qua các lần đo</h2>
-        <span className="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+        <span className="items-center justify-center text-center flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
           {recordsAsc.length} lần đo
         </span>
       </div>
@@ -453,21 +283,21 @@ function HistoryCard({ record, isLatest, onDelete }) {
           <CalendarIcon className="w-4 h-4 text-slate-400 flex-shrink-0" />
           <span className="text-sm font-bold text-slate-900 truncate">{record.date}</span>
           {isLatest && (
-            <span className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
+            <span className="items-center justify-center text-center flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
               Mới nhất
             </span>
           )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {record.inbodyScore !== undefined && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <span className="inline-flex items-center justify-center text-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
               Điểm {record.inbodyScore}
             </span>
           )}
           <button
             type="button"
             onClick={() => onDelete(record.id)}
-            className="text-xs font-semibold text-red-600 px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 active:bg-red-100"
+            className="inline-flex items-center justify-center text-center text-xs font-semibold text-red-600 px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 active:bg-red-100"
           >
             Xóa
           </button>
@@ -507,7 +337,7 @@ function HistoryCard({ record, isLatest, onDelete }) {
       <button
         type="button"
         onClick={() => setShowDetails((prev) => !prev)}
-        className="mt-2 w-full h-8 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-semibold text-slate-600 active:bg-slate-100"
+        className="inline-flex items-center justify-center text-center mt-2 w-full h-8 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-semibold text-slate-600 active:bg-slate-100"
       >
         {showDetails ? "Thu gọn chỉ số" : "Xem chi tiết chỉ số"}
       </button>
@@ -548,7 +378,25 @@ const FieldLabel = ({ children, required }) => (
 const inputClass =
   "w-full h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500";
 
-function AddRecordView({ client, onClose, onSubmit }) {
+// Trang form thêm bản ghi InBody (route "/progress-add")
+export function ProgressAddView() {
+  const navigate = useNavigate();
+  const { progressClients, selectedProgressClientId, addInbodyRecord } = useAppContext();
+
+  // Học viên đang chọn ở trang Tiến độ
+  const client = progressClients.find((c) => c.id === selectedProgressClientId) || progressClients[0];
+
+  // Scroll ref riêng biệt cho màn hình này
+  const scrollRef = useRef(null);
+
+  // Màn hình thêm mới luôn bắt đầu từ đầu trang (scrollTop = 0)
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+  }, []);
+
+  // Dữ liệu đang nhập trong form
   const [form, setForm] = useState({
     dateIso: todayIso(),
     height: String(client.height || ""),
@@ -622,7 +470,7 @@ function AddRecordView({ client, onClose, onSubmit }) {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    onSubmit({
+    addInbodyRecord({
       id: Date.now(),
       date: isoToVnDate(form.dateIso),
       height,
@@ -640,15 +488,16 @@ function AddRecordView({ client, onClose, onSubmit }) {
       chest,
       note: form.note.trim() || "Chưa có nhận xét cho lần đo này.",
     });
+    // Lưu xong thì quay lại trang trước (hiệu ứng trượt ngược)
+    navigate(-1);
   };
 
   return (
-    <div className="pb-28">
+    <Page ref={scrollRef} className="bg-slate-100 pb-28">
       <PageHeader
         title="Thêm bản ghi InBody"
         subtitle={client.name + " • " + client.phone}
-        onBack={onClose}
-        backLabel="Quay lại trang chỉ số InBody"
+        onBack={() => navigate(-1)}
       />
 
       <form onSubmit={handleSubmit} className="p-4 space-y-4">
@@ -802,7 +651,7 @@ function AddRecordView({ client, onClose, onSubmit }) {
                   setBmiManual(false);
                   setErrors((prev) => ({ ...prev, bmi: "" }));
                 }}
-                className="text-[11px] font-semibold text-blue-600 px-2 py-0.5 mb-1 rounded-md bg-blue-50 border border-blue-200 active:bg-blue-100"
+                className="inline-flex items-center justify-center text-center text-[11px] font-semibold text-blue-600 px-2 py-0.5 mb-1 rounded-md bg-blue-50 border border-blue-200 active:bg-blue-100"
               >
                 Tự động tính
               </button>
@@ -920,41 +769,49 @@ function AddRecordView({ client, onClose, onSubmit }) {
         <div className="flex justify-end gap-2 pt-1">
           <button
             type="button"
-            onClick={onClose}
-            className="h-10 px-4 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 active:bg-gray-50"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center justify-center text-center h-10 px-4 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 active:bg-gray-50"
           >
             Hủy
           </button>
           <button
             type="submit"
-            className="h-10 px-4 rounded-lg bg-blue-600 text-sm font-semibold text-white active:bg-blue-700 shadow-sm"
+            className="inline-flex items-center justify-center text-center h-10 px-4 rounded-lg bg-blue-600 text-sm font-semibold text-white active:bg-blue-700 shadow-sm"
           >
             Lưu chỉ số InBody
           </button>
         </div>
       </form>
-    </div>
+    </Page>
   );
 }
 
 // ============================================
-// Trang chính: Chỉ số InBody
+// Trang chính: Chỉ số InBody (route "/progress")
 // ============================================
 export default function ProgressPage() {
   const navigate = useNavigate();
 
+  // Lấy danh sách học viên kèm bản ghi InBody và các hàm xử lý từ Context dùng chung
+  const {
+    progressClients: clients,
+    selectedProgressClientId: selectedClientId,
+    setSelectedProgressClientId: setSelectedClientId,
+    deleteInbodyRecord,
+  } = useAppContext();
+
+  // Scroll ref riêng biệt cho trang InBody
+  const scrollRef = useRef(null);
+
   // ----- (2) STATE -----
 
-  // Danh sách học viên (kèm các bản ghi InBody), học viên đang chọn và ô tìm kiếm
-  const [clients, setClients] = useState(initialClients);
-  const [selectedClientId, setSelectedClientId] = useState(initialClients[0].id);
+  // Từ khóa tìm kiếm học viên
   const [searchQuery, setSearchQuery] = useState("");
 
-  // true = lớp trượt chứa form thêm bản ghi InBody đang mở, false = đã đóng
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-
-  // Mỗi lần mở form thì tăng 1 để form được tạo mới (làm trống) và cuộn về đầu trang
-  const [drawerKey, setDrawerKey] = useState(0);
+  // Khi vào trang: khôi phục vị trí cuộn đã lưu (nếu có)
+  useEffect(() => {
+    return restoreScroll("scroll_progress", scrollRef);
+  }, []);
 
   // ----- Dữ liệu tính toán từ state -----
 
@@ -984,45 +841,20 @@ export default function ProgressPage() {
 
   // ----- (3) HANDLERS -----
 
-  // Hàm mở form thêm bản ghi InBody (trượt từ phải sang trái)
-  const handleOpenDetail = () => {
-    setDrawerKey(drawerKey + 1);
-    setIsDetailOpen(true);
-  };
-
-  // Hàm đóng form (trượt ngược về bên phải)
-  const handleCloseDetail = () => {
-    setIsDetailOpen(false);
-  };
-
-  // Thêm bản ghi InBody mới vào đầu danh sách của học viên đang chọn, rồi đóng form
-  const handleAddRecord = (record) => {
-    setClients(
-      clients.map((c) => {
-        if (c.id === selectedClientId) {
-          return { ...c, inbodyRecords: [record, ...c.inbodyRecords] };
-        }
-        return c;
-      })
-    );
-    handleCloseDetail();
+  // Bấm nút "+": lưu vị trí cuộn rồi chuyển sang trang form thêm bản ghi InBody
+  const handleOpenAdd = () => {
+    saveScroll("scroll_progress", scrollRef);
+    navigate("/progress-add");
   };
 
   // Xóa 1 bản ghi InBody của học viên đang chọn
   const handleDeleteRecord = (recordId) => {
-    setClients(
-      clients.map((c) => {
-        if (c.id === selectedClientId) {
-          return { ...c, inbodyRecords: c.inbodyRecords.filter((r) => r.id !== recordId) };
-        }
-        return c;
-      })
-    );
+    deleteInbodyRecord(recordId);
   };
 
   // ----- (4) GIAO DIỆN -----
   return (
-    <Page className="bg-slate-100 pb-28">
+    <Page ref={scrollRef} className="bg-slate-100 pb-28">
       {/* Màn hình chính (luôn hiển thị phía sau lớp trượt) */}
       <div>
           <PageHeader
@@ -1058,9 +890,9 @@ export default function ProgressPage() {
               </div>
               <button
                 type="button"
-                onClick={handleOpenDetail}
+                onClick={handleOpenAdd}
                 aria-label="Thêm bản ghi InBody"
-                className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm active:bg-blue-700"
+                className="text-center flex-shrink-0 w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm active:bg-blue-700"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -1087,7 +919,7 @@ export default function ProgressPage() {
                     key={client.id}
                     type="button"
                     onClick={() => setSelectedClientId(client.id)}
-                    className={`flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                    className={`items-center justify-center text-center flex-shrink-0 whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                       isActive
                         ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                         : "bg-white text-slate-600 border-slate-300 active:bg-slate-50"
@@ -1111,7 +943,7 @@ export default function ProgressPage() {
                   <h2 className="text-base font-bold text-slate-900 truncate">{selectedClient.name}</h2>
                   <p className="text-xs text-slate-500 mt-0.5">{selectedClient.phone}</p>
                 </div>
-                <span className="flex-shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                <span className="items-center justify-center text-center flex-shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                   {selectedClient.goal}
                 </span>
               </div>
@@ -1123,7 +955,7 @@ export default function ProgressPage() {
                   <span className="font-semibold text-slate-700">{latest ? latest.date : "--"}</span>
                 </span>
                 {latest && latest.inbodyScore !== undefined && (
-                  <span className="flex-shrink-0 ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  <span className="items-center justify-center text-center flex-shrink-0 ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
                     Điểm {latest.inbodyScore}/100
                   </span>
                 )}
@@ -1190,7 +1022,7 @@ export default function ProgressPage() {
 
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-bold text-slate-900">Lịch sử đo InBody</h2>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-500">
+                  <span className="inline-flex items-center justify-center text-center text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-500">
                     {records.length} bản ghi
                   </span>
                 </div>
@@ -1209,17 +1041,6 @@ export default function ProgressPage() {
             )}
           </div>
         </div>
-
-      {/* Lớp trượt hiển thị form thêm bản ghi InBody (Luôn nằm trong DOM để chạy CSS transition mượt) */}
-      <div
-        className={`fixed inset-0 w-full h-full bg-slate-100 z-50 overflow-hidden transition-transform duration-300 ease-in-out ${
-          isDetailOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
-        }`}
-      >
-        <div key={drawerKey} className="w-full h-full overflow-y-auto pb-28">
-          <AddRecordView client={selectedClient} onClose={handleCloseDetail} onSubmit={handleAddRecord} />
-        </div>
-      </div>
     </Page>
   );
 }

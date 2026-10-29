@@ -1,152 +1,15 @@
-import { Page, Text, Box, Button, Icon, Input, Select, useNavigate, Avatar } from "zmp-ui";
-import React, { useState, useEffect } from "react";
+import { Page, Text, Button, Input, Select, useNavigate, Avatar } from "zmp-ui";
+import React, { useState, useEffect, useRef } from "react";
+import { BackButton, SearchIcon } from "../components/icons";
+import { useAppContext, today, tomorrow } from "../context/AppContext";
+import { saveScroll, restoreScroll } from "../utils/scroll";
 
 // ============================================
-// MOCK DATA - Workout Sessions across Today, Tomorrow, Past
+// Cấu trúc file: (1) Hàm hỗ trợ + dữ liệu mẫu, (2) State, (3) Handlers, (4) Giao diện
+// Danh sách buổi tập nằm trong src/context/AppContext.jsx
 // ============================================
-const today = "2026-10-15";
-const tomorrow = "2026-10-16";
-const yesterday = "2026-10-14";
-const past1 = "2026-10-12";
-const past2 = "2026-10-10";
-const past3 = "2026-10-08";
 
-const initialSessions = [
-  {
-    id: 1,
-    clientName: "Nguyễn Văn An",
-    phone: "0901 234 567",
-    date: today,
-    time: "06:30 - 07:30",
-    focus: "Thân trên - Ngực & Tay sau",
-    sessionNumber: "Buổi 9/24",
-    status: "Sắp tới",
-    notes: [{ id: 1, time: "06:30", text: "Tăng trọng lượng bench press 5kg. Chú ý form đùi." }],
-  },
-  {
-    id: 2,
-    clientName: "Trần Thị Bình",
-    phone: "0912 345 678",
-    date: today,
-    time: "07:45 - 08:45",
-    focus: "Chân & Mông",
-    sessionNumber: "Buổi 16/36",
-    status: "Cần nhắc lịch",
-    notes: [{ id: 2, time: "07:45", text: "Khách chưa xác nhận. Gửi Zalo nhắc 30 phút trước." }],
-  },
-  {
-    id: 3,
-    clientName: "Lê Văn Cường",
-    phone: "0923 456 789",
-    date: today,
-    time: "18:00 - 19:00",
-    focus: "Cardio & Core",
-    sessionNumber: "Buổi 23/24",
-    status: "Sắp tới",
-    notes: [{ id: 3, time: "18:00", text: "Buổi gần cuối gói. Chuẩn bị tư vấn gia hạn." }],
-  },
-  {
-    id: 4,
-    clientName: "Phạm Thị Dung",
-    phone: "0934 567 890",
-    date: tomorrow,
-    time: "06:00 - 07:00",
-    focus: "Full Body - HIIT",
-    sessionNumber: "Buổi 4/12",
-    status: "Sắp tới",
-    notes: [{ id: 4, time: "06:00", text: "Quay lại sau nghỉ 2 tuần. Cường độ nhẹ, tập form." }],
-  },
-  {
-    id: 5,
-    clientName: "Hoàng Văn Em",
-    phone: "0945 678 901",
-    date: tomorrow,
-    time: "17:30 - 18:30",
-    focus: "Thân trên - Lưng & Vai",
-    sessionNumber: "Buổi 13/24",
-    status: "Sắp tới",
-    notes: [{ id: 5, time: "17:30", text: "Chuẩn bị marathon 10km. Thêm pull-up band assisted." }],
-  },
-  {
-    id: 6,
-    clientName: "Vũ Thị Phượng",
-    phone: "0956 789 012",
-    date: tomorrow,
-    time: "19:00 - 20:00",
-    focus: "Chân - Squat & Deadlift",
-    sessionNumber: "Buổi 7/24",
-    status: "Cần nhắc lịch",
-    notes: [{ id: 6, time: "19:00", text: "Lịch thay đổi từ thứ 3. Cần xác nhận lại giờ." }],
-  },
-  {
-    id: 7,
-    clientName: "Đặng Văn Giang",
-    phone: "0967 890 123",
-    date: yesterday,
-    time: "06:30 - 07:30",
-    focus: "Ngực & Tay trước",
-    sessionNumber: "Buổi 11/24",
-    status: "Đã hoàn thành",
-    notes: [{ id: 7, time: "06:30", text: "PR bench press 70kg x 5 reps. Form tốt, tăng 2.5kg buổi sau." }],
-  },
-  {
-    id: 8,
-    clientName: "Bùi Thị Hạnh",
-    phone: "0978 901 234",
-    date: yesterday,
-    time: "18:00 - 19:00",
-    focus: "Mông & Hậu đùi",
-    sessionNumber: "Buổi 5/12",
-    status: "Đã hoàn thành",
-    notes: [{ id: 8, time: "18:00", text: "Hip thrust 60kg x 10. Glute activation tốt. Thêm band work." }],
-  },
-  {
-    id: 9,
-    clientName: "Ngô Văn Khải",
-    phone: "0989 012 345",
-    date: past1,
-    time: "07:00 - 08:00",
-    focus: "Cardio - Interval Running",
-    sessionNumber: "Buổi 18/36",
-    status: "Đã hoàn thành",
-    notes: [{ id: 9, time: "07:00", text: "8km pace 6:15/km. HR zone 3 duy trì tốt. Tăng 1km tuần sau." }],
-  },
-  {
-    id: 10,
-    clientName: "Dương Thị Lan",
-    phone: "0990 123 456",
-    date: past2,
-    time: "17:00 - 18:00",
-    focus: "Thân dưới - Lunge & Step up",
-    sessionNumber: "Buổi 3/24",
-    status: "Đã dời lịch",
-    notes: [{ id: 10, time: "17:00", text: "Khách bận đột xuất. Đã dời sang 20/10 lúc 17:00." }],
-  },
-  {
-    id: 11,
-    clientName: "Phan Văn Minh",
-    phone: "0901 111 222",
-    date: past3,
-    time: "06:00 - 07:00",
-    focus: "Core & Mobility",
-    sessionNumber: "Buổi 12/24",
-    status: "Đã hoàn thành",
-    notes: [{ id: 11, time: "06:00", text: "Plank 3 phút. Bird-dog 3x12. Cải thiện đau lưng dưới." }],
-  },
-  {
-    id: 12,
-    clientName: "Võ Thị Nga",
-    phone: "0912 222 333",
-    date: "2026-10-05",
-    time: "18:30 - 19:30",
-    focus: "Vai & Tay sau",
-    sessionNumber: "Buổi 8/24",
-    status: "Đã hoàn thành",
-    notes: [{ id: 12, time: "18:30", text: "Overhead press 30kg x 8. Lateral raise drop set. Form ổn." }],
-  },
-];
-
-// Helper functions
+// Các hàm hỗ trợ (helpers)
 function formatDateLabel(dateStr) {
   const date = new Date(dateStr);
   const todayDate = new Date(today);
@@ -214,8 +77,7 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
             <div className="inline-flex items-center justify-center px-3 py-1 rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 text-xs font-semibold flex-shrink-0">
               {session.time}
             </div>
-            <span className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${statusStyle.bg} flex-shrink-0`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot} mr-1.5`} />
+            <span className={`justify-center text-center inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${statusStyle.bg} flex-shrink-0`}>
               {session.status}
             </span>
           </div>
@@ -249,7 +111,7 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
                 <Button
                   variant="primary"
                   size="small"
-                  className="w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
+                  className="inline-flex items-center justify-center text-center w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
                   onClick={(e) => { e.stopPropagation(); onComplete(session.id); }}
                 >
                   Hoàn thành
@@ -259,7 +121,7 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
                 <Button
                   variant="outline"
                   size="small"
-                  className="w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
+                  className="inline-flex items-center justify-center text-center w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
                   onClick={(e) => { e.stopPropagation(); onRemindDone(session.id); }}
                 >
                   Đã nhắc lịch
@@ -283,9 +145,24 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
 }
 
 // ============================================
-// Add Session View (Full Page)
+// Trang form thêm buổi tập (route "/workout-add")
 // ============================================
-function AddSessionView({ onClose, onSubmit, clients }) {
+export function WorkoutAddView() {
+  const navigate = useNavigate();
+  const { addSession } = useAppContext();
+  const clients = workoutClients;
+
+  // Scroll ref riêng biệt cho màn hình này
+  const scrollRef = useRef(null);
+
+  // Màn hình thêm buổi tập luôn bắt đầu từ đầu trang (scrollTop = 0)
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+  }, []);
+
+  // Dữ liệu đang nhập trong form
   const [formData, setFormData] = useState({
     clientId: "",
     date: today,
@@ -296,6 +173,7 @@ function AddSessionView({ onClose, onSubmit, clients }) {
     notes: "",
   });
 
+  // Danh sách lựa chọn cho ô Nội dung tập và Trạng thái
   const focuses = [
     "Thân trên - Ngực & Tay sau",
     "Thân trên - Lưng & Vai",
@@ -311,15 +189,17 @@ function AddSessionView({ onClose, onSubmit, clients }) {
 
   const statuses = ["Sắp tới", "Cần nhắc lịch", "Đã dời lịch"];
 
+  // Mặc định chọn học viên đầu tiên trong danh sách
   useEffect(() => {
     if (clients.length > 0) {
       setFormData(prev => ({ ...prev, clientId: clients[0].id }));
     }
   }, [clients]);
 
+  // Bấm "Tạo buổi tập": lưu vào Context rồi quay lại trang trước (hiệu ứng trượt ngược)
   const handleSubmit = (e) => {
     e.preventDefault();
-    const client = clients.find(c => c.id === formData.clientId);
+    const client = clients.find(c => String(c.id) === String(formData.clientId));
     if (!client) return;
 
     const notesArray = formData.notes && formData.notes.trim() ? [{
@@ -328,25 +208,23 @@ function AddSessionView({ onClose, onSubmit, clients }) {
       text: formData.notes.trim()
     }] : [];
 
-    onSubmit({
+    addSession({
       ...formData,
       clientName: client.name,
       phone: client.phone,
       notes: notesArray,
     });
-    onClose();
+    navigate(-1);
   };
 
   return (
-    <div className="p-4 pb-28 space-y-4">
+    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100 dark:bg-slate-900">
       {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
         className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 pr-24"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
-        <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={onClose} className="flex-shrink-0">
-          Hủy
-        </Button>
+        <BackButton onClick={() => navigate(-1)} />
         <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Thêm buổi tập mới</Text.Title>
       </div>
 
@@ -426,18 +304,33 @@ function AddSessionView({ onClose, onSubmit, clients }) {
 
         {/* Submit Buttons */}
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" type="button" onClick={onClose}>Hủy</Button>
-          <Button variant="primary" type="submit">Tạo buổi tập</Button>
+          <Button className="inline-flex items-center justify-center text-center" variant="outline" type="button" onClick={() => navigate(-1)}>Hủy</Button>
+          <Button className="inline-flex items-center justify-center text-center" variant="primary" type="submit">Tạo buổi tập</Button>
         </div>
       </form>
-    </div>
+    </Page>
   );
 }
 
 // ============================================
-// Session Detail View (Full Page)
+// Trang chi tiết buổi tập (route "/workout-detail")
 // ============================================
-function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
+export function WorkoutDetailView() {
+  const navigate = useNavigate();
+  const { selectedSession: session, updateSession: onUpdateSession } = useAppContext();
+  const clients = workoutClients;
+
+  // Scroll ref riêng biệt cho màn hình này
+  const scrollRef = useRef(null);
+
+  // Màn hình chi tiết buổi tập luôn bắt đầu từ đầu trang (scrollTop = 0)
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 0;
+    }
+  }, []);
+
+  // Bản sao buổi tập đang xem, nội dung ghi chú đang nhập và cờ báo "đã lưu"
   const [localSession, setLocalSession] = useState(session);
   const [editNotes, setEditNotes] = useState('');
   const [saved, setSaved] = useState(false);
@@ -447,17 +340,28 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
     setEditNotes('');
   }, [session]);
 
+  // Chưa chọn buổi tập (ví dụ tải lại trang): hiện nút quay lại
+  if (!localSession) {
+    return (
+      <Page className="bg-slate-100 dark:bg-slate-900 p-4">
+        <BackButton onClick={() => navigate(-1)} />
+      </Page>
+    );
+  }
+
   const client = clients.find(c => c.id === localSession.clientId) ||
                  clients.find(c => c.name === localSession.clientName);
 
   const statusStyle = getStatusStyle(localSession.status);
 
+  // Đổi trạng thái buổi tập
   const handleStatusChange = (newStatus) => {
     const updated = { ...localSession, status: newStatus };
     setLocalSession(updated);
     onUpdateSession(localSession.id, updated);
   };
 
+  // Lưu ghi chú mới cho buổi tập
   const handleSaveNotes = () => {
     if (!editNotes.trim()) return;
     const newNote = {
@@ -474,6 +378,7 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
     setTimeout(() => setSaved(false), 1500);
   };
 
+  // Xóa 1 ghi chú của buổi tập
   const handleDeleteNote = (id) => {
     const updatedNotes = localSession.notes.filter(n => n.id !== id);
     const updated = {...localSession, notes: updatedNotes};
@@ -482,15 +387,13 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
   };
 
   return (
-    <div className="p-4 pb-28 space-y-4">
+    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100 dark:bg-slate-900">
       {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
         className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 pr-24"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
-        <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={onClose} className="flex-shrink-0">
-          Quay lại
-        </Button>
+        <BackButton onClick={() => navigate(-1)} />
         <div className="flex-1 min-w-0">
           <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white truncate">Chi tiết buổi tập</Text.Title>
           <Text className="text-sm text-gray-500 dark:text-gray-400">{localSession.clientName} • {formatDateLabel(localSession.date)}</Text>
@@ -504,8 +407,7 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
           <div className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
             {localSession.time}
           </div>
-          <span className={`inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full ${statusStyle.bg}`}>
-            <span className={`w-2 h-2 rounded-full ${statusStyle.dot} mr-2`} />
+          <span className={`justify-center text-center inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full ${statusStyle.bg}`}>
             {localSession.status}
           </span>
         </div>
@@ -546,7 +448,7 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
               <div key={note.id} className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-200 dark:border-slate-700 flex flex-col gap-1">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] opacity-75 uppercase">{note.time}</span>
-                  <button onClick={() => handleDeleteNote(note.id)} className="text-xs text-red-500 hover:text-red-700 font-medium px-2 py-0.5 rounded hover:bg-red-50">Xóa</button>
+                  <button onClick={() => handleDeleteNote(note.id)} className="inline-flex items-center justify-center text-center text-xs text-red-500 hover:text-red-700 font-medium px-2 py-0.5 rounded hover:bg-red-50">Xóa</button>
                 </div>
                 <Text className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-line">{note.text}</Text>
               </div>
@@ -563,7 +465,7 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
             placeholder="Nhập ghi chú mới cho buổi tập..."
           />
           <div className="flex justify-end gap-2">
-            <Button variant="primary" onClick={handleSaveNotes}>+ Lưu ghi chú mới</Button>
+            <Button className="inline-flex items-center justify-center text-center" variant="primary" onClick={handleSaveNotes}>Lưu ghi chú mới</Button>
           </div>
           {saved && (
             <Text className="text-xs text-green-600 dark:text-green-400">Đã lưu ghi chú!</Text>
@@ -579,7 +481,7 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
             <Button
               variant={localSession.status === "Đã hoàn thành" ? "primary" : "outline"}
               size="small"
-              className="w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
+              className="inline-flex items-center justify-center text-center w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
               onClick={() => handleStatusChange("Đã hoàn thành")}
             >
               Đã hoàn thành
@@ -587,7 +489,7 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
             <Button
               variant={localSession.status === "Cần nhắc lịch" ? "primary" : "outline"}
               size="small"
-              className="w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
+              className="inline-flex items-center justify-center text-center w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
               onClick={() => handleStatusChange("Cần nhắc lịch")}
             >
               Cần nhắc lịch
@@ -595,7 +497,7 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
             <Button
               variant={localSession.status === "Đã dời lịch" ? "primary" : "outline"}
               size="small"
-              className="w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
+              className="inline-flex items-center justify-center text-center w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
               onClick={() => handleStatusChange("Đã dời lịch")}
             >
               Đã dời lịch
@@ -603,7 +505,7 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
             <Button
               variant={localSession.status === "Sắp tới" ? "primary" : "outline"}
               size="small"
-              className="w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
+              className="inline-flex items-center justify-center text-center w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
               onClick={() => handleStatusChange("Sắp tới")}
             >
               Sắp tới
@@ -616,7 +518,7 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
       {(localSession.status === "Đã hoàn thành" || localSession.status === "Đã dời lịch") && (
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <Icon icon={localSession.status === "Đã hoàn thành" ? "zi-check-circle" : "zi-calendar-edit"} size="18" className="text-green-600" />
+            
             <Text className="font-medium text-green-800 dark:text-green-300">
               {localSession.status === "Đã hoàn thành" ? "Buổi tập đã hoàn thành" : "Buổi tập đã được dời lịch"}
             </Text>
@@ -626,14 +528,15 @@ function SessionDetailView({ session, onClose, onUpdateSession, clients }) {
           </Text>
         </div>
       )}
-    </div>
+    </Page>
   );
 }
 
 // ============================================
 // Dữ liệu mẫu: danh sách học viên cho ô chọn khi thêm buổi tập
+// (Danh sách buổi tập nằm trong src/context/AppContext.jsx)
 // ============================================
-const clients = [
+const workoutClients = [
   { id: 1, name: "Nguyễn Văn An", phone: "0901 234 567" },
   { id: 2, name: "Trần Thị Bình", phone: "0912 345 678" },
   { id: 3, name: "Lê Văn Cường", phone: "0923 456 789" },
@@ -649,27 +552,27 @@ const clients = [
 ];
 
 // ============================================
-// Trang chính: Lịch & Buổi tập
+// Trang chính: Lịch & Buổi tập (route "/workouts")
 // ============================================
 export default function WorkoutsPage() {
   const navigate = useNavigate();
 
+  // Lấy danh sách buổi tập và các hàm xử lý từ Context dùng chung
+  const { sessions, setSelectedSession, updateSession } = useAppContext();
+
+  // Scroll ref riêng biệt cho danh sách buổi tập
+  const scrollRef = useRef(null);
+
   // ----- (2) STATE -----
 
-  // Danh sách buổi tập, ô tìm kiếm và bộ lọc đang chọn
-  const [sessions, setSessions] = useState(initialSessions);
+  // Từ khóa tìm kiếm và tab bộ lọc đang chọn
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
 
-  // State của lớp trượt (drawer):
-  // - selectedSession: buổi tập vừa bấm (giữ nguyên dữ liệu để nội dung vẫn hiện khi trượt ra)
-  // - drawerMode: "detail" (xem chi tiết) hoặc "add" (form thêm buổi tập)
-  // - isDetailOpen: true = lớp trượt đang mở, false = đã đóng
-  // - drawerKey: tăng 1 mỗi lần mở lớp trượt để nội dung được tạo mới (form trống, cuộn về đầu trang)
-  const [selectedSession, setSelectedSession] = useState(null);
-  const [drawerMode, setDrawerMode] = useState("detail");
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [drawerKey, setDrawerKey] = useState(0);
+  // Khi vào trang: khôi phục vị trí cuộn đã lưu (nếu có)
+  useEffect(() => {
+    return restoreScroll("scroll_workouts", scrollRef);
+  }, []);
 
   // ----- Dữ liệu tính toán từ state -----
 
@@ -714,63 +617,32 @@ export default function WorkoutsPage() {
 
   // ----- (3) HANDLERS -----
 
-  // Thêm buổi tập mới vào đầu danh sách
-  const handleAddSession = (newSession) => {
-    const client = clients.find((c) => c.id === newSession.clientId);
-    let totalSessions = "24";
-    if (client && client.packageName) {
-      const found = client.packageName.match(/\d+/);
-      if (found) totalSessions = found[0];
-    }
-    const sessionWithId = {
-      ...newSession,
-      id: Date.now(),
-      sessionNumber: `Buổi ${newSession.sessionNumber}/${totalSessions}`,
-    };
-    setSessions([sessionWithId, ...sessions]);
-  };
-
-  // Cập nhật 1 buổi tập (cả trong danh sách lẫn màn hình chi tiết đang mở)
-  const handleUpdateSession = (id, updates) => {
-    setSessions(sessions.map((s) => (s.id === id ? { ...s, ...updates } : s)));
-    if (selectedSession && selectedSession.id === id) {
-      setSelectedSession({ ...selectedSession, ...updates });
-    }
-  };
-
   // Đánh dấu buổi tập đã hoàn thành
   const handleComplete = (id) => {
-    handleUpdateSession(id, { status: "Đã hoàn thành" });
+    updateSession(id, { status: "Đã hoàn thành" });
   };
 
   // Đánh dấu đã nhắc lịch xong (chuyển về trạng thái "Sắp tới")
   const handleRemindDone = (id) => {
-    handleUpdateSession(id, { status: "Sắp tới" });
+    updateSession(id, { status: "Sắp tới" });
   };
 
-  // Hàm mở màn hình chi tiết buổi tập (trượt từ phải sang trái)
+  // Bấm vào 1 buổi tập: lưu vị trí cuộn, lưu buổi đã chọn vào Context rồi chuyển sang trang chi tiết
   const handleOpenDetail = (session) => {
-    setDrawerKey(drawerKey + 1);
+    saveScroll("scroll_workouts", scrollRef);
     setSelectedSession(session);
-    setDrawerMode("detail");
-    setIsDetailOpen(true);
+    navigate("/workout-detail");
   };
 
-  // Hàm mở form thêm buổi tập (cũng trượt từ phải sang trái)
+  // Bấm nút "+ Thêm buổi": lưu vị trí cuộn rồi chuyển sang trang form thêm buổi tập
   const handleOpenAdd = () => {
-    setDrawerKey(drawerKey + 1);
-    setDrawerMode("add");
-    setIsDetailOpen(true);
-  };
-
-  // Hàm đóng lớp trượt (trượt ngược về bên phải). Không xóa selectedSession để nội dung không bị mất khi đang trượt
-  const handleCloseDetail = () => {
-    setIsDetailOpen(false);
+    saveScroll("scroll_workouts", scrollRef);
+    navigate("/workout-add");
   };
 
   // ----- (4) GIAO DIỆN -----
   return (
-    <Page className="bg-slate-100 dark:bg-slate-900 min-h-screen">
+    <Page ref={scrollRef} className="bg-slate-100 dark:bg-slate-900 min-h-screen">
       <div>
           {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
           <div
@@ -778,7 +650,7 @@ export default function WorkoutsPage() {
             style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
           >
             <div className="flex items-center gap-2">
-              <Button variant="text" size="small" icon={<Icon icon="zi-chevron-left" size="18" />} onClick={() => navigate(-1)}>Quay lại</Button>
+              <BackButton onClick={() => navigate(-1)} />
               <div className="flex-1 min-w-0">
                 <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Lịch & Buổi tập</Text.Title>
                 <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý buổi tập học viên</Text>
@@ -791,7 +663,7 @@ export default function WorkoutsPage() {
             {/* Search Input */}
             <div className="flex gap-3">
               <div className="relative flex-1">
-                <Icon icon="zi-search" size="18" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <SearchIcon />
                 <input
                   type="search"
                   value={searchQuery}
@@ -800,7 +672,7 @@ export default function WorkoutsPage() {
                   className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <Button variant="primary" size="small" icon={<Icon icon="zi-plus" size="18" />} onClick={handleOpenAdd}>
+              <Button className="inline-flex items-center justify-center text-center" variant="primary" size="small" onClick={handleOpenAdd}>
                 + Thêm buổi
               </Button>
             </div>
@@ -812,11 +684,11 @@ export default function WorkoutsPage() {
                   key={f.key}
                   variant={activeFilter === f.key ? "primary" : "outline"}
                   size="small"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0"
+                  className="justify-center text-center inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0"
                   onClick={() => setActiveFilter(f.key)}
                 >
                   {f.label}
-                  <span className="ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 dark:bg-white/10 text-center font-bold">
+                  <span className="inline-flex items-center justify-center ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 dark:bg-white/10 text-center font-bold">
                     {f.count}
                   </span>
                 </Button>
@@ -829,9 +701,6 @@ export default function WorkoutsPage() {
               {(groupedSessions.today && groupedSessions.today.length > 0) && (
                 <div className="px-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <Icon icon="zi-sun" size="16" className="text-blue-600 dark:text-blue-400" />
-                    </div>
                     <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Hôm nay ({groupedSessions.today.length})</Text.Title>
                   </div>
                   <div className="flex flex-col space-y-4">
@@ -852,9 +721,6 @@ export default function WorkoutsPage() {
               {(groupedSessions.tomorrow && groupedSessions.tomorrow.length > 0) && (
                 <div className="px-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                      <Icon icon="zi-calendar" size="16" className="text-purple-600 dark:text-purple-400" />
-                    </div>
                     <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Ngày mai ({groupedSessions.tomorrow.length})</Text.Title>
                   </div>
                   <div className="flex flex-col space-y-4">
@@ -875,9 +741,6 @@ export default function WorkoutsPage() {
               {(groupedSessions.past && groupedSessions.past.length > 0) && (
                 <div className="px-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                      <Icon icon="zi-history" size="16" className="text-gray-600 dark:text-gray-400" />
-                    </div>
                     <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Ngày trước ({groupedSessions.past.length})</Text.Title>
                   </div>
                   <div className="flex flex-col space-y-4">
@@ -897,7 +760,7 @@ export default function WorkoutsPage() {
               {/* Empty State */}
               {filteredSessions.length === 0 && (
                 <div className="bg-white rounded-xl shadow-sm p-8 text-center dark:bg-slate-800 dark:border dark:border-slate-700">
-                  <Icon icon="zi-calendar-search" size="48" className="mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                  
                   <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white mb-1">Không tìm thấy buổi tập</Text.Title>
                   <Text className="text-gray-500 dark:text-gray-400">
                     {searchQuery ? "Thử từ khóa khác hoặc xóa bộ lọc" : "Chưa có buổi tập nào. Hãy thêm buổi tập đầu tiên!"}
@@ -907,30 +770,6 @@ export default function WorkoutsPage() {
             </div>
           </div>
         </div>
-
-      {/* Lớp trượt hiển thị chi tiết / form thêm (Luôn nằm trong DOM để chạy CSS transition mượt) */}
-      <div
-        className={`fixed inset-0 w-full h-full bg-slate-100 dark:bg-slate-900 z-50 overflow-hidden transition-transform duration-300 ease-in-out ${
-          isDetailOpen ? "translate-x-0" : "translate-x-full pointer-events-none"
-        }`}
-      >
-        <div key={drawerKey} className="w-full h-full overflow-y-auto pb-28">
-          {/* Form thêm buổi tập */}
-          {drawerMode === "add" && (
-            <AddSessionView onClose={handleCloseDetail} onSubmit={handleAddSession} clients={clients} />
-          )}
-
-          {/* Chi tiết buổi tập */}
-          {drawerMode === "detail" && selectedSession && (
-            <SessionDetailView
-              session={selectedSession}
-              onClose={handleCloseDetail}
-              onUpdateSession={handleUpdateSession}
-              clients={clients}
-            />
-          )}
-        </div>
-      </div>
     </Page>
   );
 }

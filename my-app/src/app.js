@@ -19,5 +19,9 @@ if (!window.APP_CONFIG) {
 
 // Mount the app
 import Layout from "./components/layout";
+// Context dùng chung: giữ state (học viên, buổi tập, InBody...) cho mọi trang
+import { AppProvider } from "./context/AppContext";
 const root = createRoot(document.getElementById("app"));
-root.render(React.createElement(Layout));
+root.render(
+  React.createElement(AppProvider, null, React.createElement(Layout))
+);

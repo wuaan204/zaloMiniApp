@@ -8,10 +8,10 @@ import {
   BottomNavigation,
 } from "zmp-ui";
 
-import DashboardPage from "../pages/dashboard";
-import ClientsPage from "../pages/clients";
-import WorkoutsPage from "../pages/workouts";
-import ProgressPage from "../pages/progress";
+import DashboardPage, { DashboardClientDetail } from "../pages/dashboard";
+import ClientsPage, { ClientDetailView, ClientAddView } from "../pages/clients";
+import WorkoutsPage, { WorkoutDetailView, WorkoutAddView } from "../pages/workouts";
+import ProgressPage, { ProgressAddView } from "../pages/progress";
 
 const Layout = () => {
   return (
@@ -19,10 +19,18 @@ const Layout = () => {
       <SnackbarProvider>
         <ZMPRouter>
           <AnimationRoutes>
+            {/* Mọi màn hình (kể cả màn chi tiết / form thêm) đều là Route thật
+                để AnimationRoutes tạo hiệu ứng trượt giống hệt nhau */}
             <Route path="/" element={<DashboardPage />} />
+            <Route path="/dashboard-client" element={<DashboardClientDetail />} />
             <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/client-detail" element={<ClientDetailView />} />
+            <Route path="/client-add" element={<ClientAddView />} />
             <Route path="/workouts" element={<WorkoutsPage />} />
+            <Route path="/workout-detail" element={<WorkoutDetailView />} />
+            <Route path="/workout-add" element={<WorkoutAddView />} />
             <Route path="/progress" element={<ProgressPage />} />
+            <Route path="/progress-add" element={<ProgressAddView />} />
           </AnimationRoutes>
           <BottomNavigation
             tabs={[
