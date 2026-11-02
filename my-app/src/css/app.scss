@@ -47,3 +47,190 @@ html, body, #app {
     transition: none !important;
   }
 }
+
+/* ============================================
+   KHOÁ CHẾ ĐỘ SÁNG (LIGHT MODE ONLY)
+   ============================================
+   Vì sao cần phần này (dễ giải thích khi bảo vệ luận văn):
+   - Điện thoại iOS/Android hoặc Zalo WebView có thể đang bật Dark Mode.
+   - Khi đó trình duyệt tự đổi màu ô nhập ngày (input type="date"),
+     select, thanh cuộn... và zmp-ui có sẵn bộ biến màu tối --zaui-dark-*.
+   - Các rule dưới đây khoá toàn bộ Mini App ở nền sáng, chữ xanh đen,
+     bất kể cài đặt hệ điều hành của người dùng.
+   ============================================ */
+
+/* ---------- 1) Nền và màu chữ gốc của cả Mini App ---------- */
+:root,
+html,
+body,
+#app,
+.zaui-app,
+.zaui-page {
+  /* Dòng đầu là phương án dự phòng cho WebView cũ chưa hiểu từ khoá "only" */
+  color-scheme: light !important;
+  color-scheme: light only !important;
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* ---------- 2) Biến màu của zmp-ui: luôn trỏ về bảng màu SÁNG ---------- */
+:root,
+.zaui-app,
+.zaui-page {
+  /* Bộ biến "light" giữ nguyên tông sáng của app */
+  --zaui-light-body-background-color: #f1f5f9;
+  --zaui-light-text-color: #0f172a;
+  --zaui-light-input-background-color: #ffffff;
+  --zaui-light-input-text-color: #0f172a;
+  --zaui-light-input-border-color: #cbd5e1;
+  --zaui-light-input-placeholder-color: #94a3b8;
+  --zaui-light-header-background-color: #ffffff;
+  --zaui-light-header-color: #0f172a;
+  --zaui-light-bottom-navigation-background-color: #ffffff;
+  --zaui-light-bottom-navigation-color: #475569;
+  --zaui-light-bottom-navigation-active-color: #2563eb;
+  --zaui-light-bottom-navigation-divider-color: #e2e8f0;
+
+  /* Bộ biến "dark": gán lại thành màu SÁNG để nếu body lỡ bị gắn
+     thuộc tính zaui-theme="dark" thì giao diện vẫn không bị tối */
+  --zaui-dark-body-background-color: #f1f5f9;
+  --zaui-dark-text-color: #0f172a;
+  --zaui-dark-input-background-color: #ffffff;
+  --zaui-dark-input-text-color: #0f172a;
+  --zaui-dark-input-border-color: #cbd5e1;
+  --zaui-dark-input-placeholder-color: #94a3b8;
+  --zaui-dark-header-background-color: #ffffff;
+  --zaui-dark-header-color: #0f172a;
+  --zaui-dark-bottom-navigation-background-color: #ffffff;
+  --zaui-dark-bottom-navigation-color: #475569;
+  --zaui-dark-bottom-navigation-active-color: #2563eb;
+  --zaui-dark-bottom-navigation-divider-color: #e2e8f0;
+}
+
+/* ---------- 3) Trang, header và thanh điều hướng dưới ---------- */
+.zaui-page {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.zaui-header {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.zaui-bottom-navigation,
+.zaui-bottom-navigation-content {
+  background-color: #ffffff !important;
+}
+
+.zaui-bottom-navigation-item {
+  color: #475569 !important;
+}
+
+.zaui-bottom-navigation-item-active {
+  color: #2563eb !important;
+}
+
+/* ---------- 4) Ô nhập liệu: luôn nền trắng, chữ xanh đen ---------- */
+input,
+textarea,
+select {
+  color-scheme: light !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.zaui-input,
+.zaui-input-affix-wrapper,
+.zaui-select-trigger,
+.zaui-textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* ---------- 5) Ô chọn ngày (input type="date") ---------- */
+/* Luôn dùng bảng màu sáng, nền trong suốt để hoà vào khung trắng bọc ngoài.
+   Icon lịch mặc định của trình duyệt được ẩn đi (opacity: 0) để chỉ hiện
+   icon lịch SVG tự vẽ canh phải trong JSX. */
+input[type="date"] {
+  color-scheme: light !important;
+  background-color: transparent !important;
+  color: #1e293b !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  -webkit-appearance: none;
+  appearance: none;
+  opacity: 0;
+  width: 2.5rem;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---------- 6) Chặn lần cuối khi thiết bị đang bật Dark Mode ---------- */
+/* Đây là "lưới an toàn": kể cả khi hệ điều hành / Zalo WebView báo dark,
+   mọi thành phần bên dưới vẫn giữ đúng nền sáng và chữ xanh đen. */
+@media (prefers-color-scheme: dark) {
+  :root,
+  html,
+  body,
+  #app,
+  .zaui-app,
+  .zaui-page {
+    color-scheme: light only !important;
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+  }
+
+  .zaui-page {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+  }
+
+  .zaui-bottom-navigation,
+  .zaui-bottom-navigation-content {
+    background-color: #ffffff !important;
+  }
+
+  .zaui-bottom-navigation-item {
+    color: #475569 !important;
+  }
+
+  .zaui-bottom-navigation-item-active {
+    color: #2563eb !important;
+  }
+
+  input,
+  textarea,
+  select {
+    color-scheme: light !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #94a3b8 !important;
+  }
+
+  /* Giữ nguyên bộ biến sáng của zmp-ui, không cho chuyển sang --zaui-dark-*.
+     (Các biến --zaui-dark-* đã được gán lại thành màu sáng ở mục 2 phía trên.) */
+  :root,
+  .zaui-app,
+  .zaui-page {
+    --zaui-light-body-background-color: #f1f5f9;
+    --zaui-light-text-color: #0f172a;
+    --zaui-light-input-background-color: #ffffff;
+    --zaui-light-input-text-color: #0f172a;
+    --zaui-light-bottom-navigation-background-color: #ffffff;
+  }
+}

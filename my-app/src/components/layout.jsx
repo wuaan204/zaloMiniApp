@@ -1,4 +1,3 @@
-import { getSystemInfo } from "zmp-sdk";
 import {
   AnimationRoutes,
   App,
@@ -14,8 +13,9 @@ import WorkoutsPage, { WorkoutDetailView, WorkoutAddView } from "../pages/workou
 import ProgressPage, { ProgressAddView } from "../pages/progress";
 
 const Layout = () => {
+  // theme="light": luôn khoá giao diện ở chế độ Sáng, không theo Dark Mode của Zalo
   return (
-    <App theme={getSystemInfo().zaloTheme}>
+    <App theme="light">
       <SnackbarProvider>
         <ZMPRouter>
           <AnimationRoutes>

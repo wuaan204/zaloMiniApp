@@ -24,28 +24,28 @@ function formatDateLabel(dateStr) {
 function getStatusStyle(status) {
   switch (status) {
     case "Đã hoàn thành":
-      return { bg: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400", dot: "bg-green-500" };
+      return { bg: "bg-green-100 text-green-800", dot: "bg-green-500" };
     case "Sắp tới":
-      return { bg: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400", dot: "bg-blue-500" };
+      return { bg: "bg-blue-100 text-blue-800", dot: "bg-blue-500" };
     case "Cần nhắc lịch":
-      return { bg: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400", dot: "bg-amber-500" };
+      return { bg: "bg-amber-100 text-amber-800", dot: "bg-amber-500" };
     case "Đã dời lịch":
-      return { bg: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300", dot: "bg-gray-500" };
+      return { bg: "bg-gray-100 text-gray-800", dot: "bg-gray-500" };
     default:
-      return { bg: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300", dot: "bg-gray-500" };
+      return { bg: "bg-gray-100 text-gray-800", dot: "bg-gray-500" };
   }
 }
 
 function getFocusPillStyle() {
-  return "bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800";
+  return "bg-purple-50 text-purple-700 border border-purple-200";
 }
 
 function getProgressPillStyle() {
-  return "bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800";
+  return "bg-indigo-50 text-indigo-700 border border-indigo-200";
 }
 
 function getDatePillStyle() {
-  return "bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-900/20 dark:text-teal-300 dark:border-teal-800";
+  return "bg-teal-50 text-teal-700 border border-teal-200";
 }
 
 function getDayGroup(dateStr) {
@@ -64,7 +64,7 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
 
   return (
     <div
-      className="bg-white rounded-xl border border-slate-300 shadow-sm p-4 cursor-pointer hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 transition-colors"
+      className="bg-white rounded-xl border border-slate-300 shadow-sm p-4 cursor-pointer hover:bg-slate-50 transition-colors"
       onClick={(e) => {
         if (!e.target.closest('button')) onClick(session);
       }}
@@ -74,7 +74,7 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
         <div className="flex-1 min-w-0">
           {/* Top row: Time badge + Status */}
           <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="inline-flex items-center justify-center px-3 py-1 rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 text-xs font-semibold flex-shrink-0">
+            <div className="inline-flex items-center justify-center px-3 py-1 rounded-lg bg-slate-100 text-slate-700 text-xs font-semibold flex-shrink-0">
               {session.time}
             </div>
             <span className={`justify-center text-center inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${statusStyle.bg} flex-shrink-0`}>
@@ -84,8 +84,8 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
 
           {/* Client Name & Phone */}
           <div className="flex flex-col items-start gap-1 mb-2">
-            <Text.Title size="medium" className="font-semibold text-gray-900 dark:text-white truncate">{session.clientName}</Text.Title>
-            <Text className="text-xs text-slate-500 dark:text-slate-400">{session.phone}</Text>
+            <Text.Title size="medium" className="font-semibold text-gray-900 truncate">{session.clientName}</Text.Title>
+            <Text className="text-xs text-slate-500">{session.phone}</Text>
           </div>
 
           {/* Colored Pill Boxes: Focus, Progress, Date — strict grid-cols-3, never wraps */}
@@ -133,7 +133,7 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
           {/* Notes preview for completed/rescheduled */}
           {!isUpcoming && session.notes && session.notes.length > 0 && (
             <div className="pt-2">
-              <Text className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+              <Text className="text-xs text-gray-500 line-clamp-2">
                 {session.notes[session.notes.length - 1].time} - {session.notes[session.notes.length - 1].text}
               </Text>
             </div>
@@ -218,20 +218,20 @@ export function WorkoutAddView() {
   };
 
   return (
-    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100 dark:bg-slate-900">
+    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100">
       {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
-        className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 pr-24"
+        className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 pr-24"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
         <BackButton onClick={() => navigate(-1)} />
-        <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Thêm buổi tập mới</Text.Title>
+        <Text.Title size="xLarge" className="font-bold text-gray-900">Thêm buổi tập mới</Text.Title>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Client Select */}
         <div>
-          <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Học viên <span className="text-red-500">*</span></Text>
+          <Text className="text-sm text-gray-500 mb-1 block">Học viên <span className="text-red-500">*</span></Text>
           <Select value={formData.clientId} onChange={e => setFormData({...formData, clientId: e.target.value})} className="w-full">
             {clients.map(c => (
               <option key={c.id} value={c.id}>{c.name} - {c.phone}</option>
@@ -241,17 +241,37 @@ export function WorkoutAddView() {
 
         {/* Date & Time */}
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Ngày tập <span className="text-red-500">*</span></Text>
-            <Input
-              type="date"
-              value={formData.date}
-              onChange={e => setFormData({...formData, date: e.target.value})}
-              className="w-full"
-            />
+          <div className="min-w-0">
+            <Text className="text-sm text-gray-500 mb-1 block">Ngày tập <span className="text-red-500">*</span></Text>
+            {/* Khung bọc chặt: giữ input luôn nằm trong cột, không tràn ra ngoài trên iOS */}
+            <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="block w-full max-w-full min-w-0 box-border appearance-none bg-transparent px-3 py-2.5 pr-10 text-sm text-slate-800 focus:outline-none"
+                style={{ WebkitAppearance: 'none', minWidth: 0, width: '100%', colorScheme: 'light' }}
+              />
+              {/* Icon lịch vẽ bằng SVG để iOS luôn hiển thị icon sắc nét */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            </div>
           </div>
           <div>
-            <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Khung giờ <span className="text-red-500">*</span></Text>
+            <Text className="text-sm text-gray-500 mb-1 block">Khung giờ <span className="text-red-500">*</span></Text>
             <Input
               type="text"
               value={formData.time}
@@ -264,7 +284,7 @@ export function WorkoutAddView() {
 
         {/* Focus */}
         <div>
-          <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Nội dung tập <span className="text-red-500">*</span></Text>
+          <Text className="text-sm text-gray-500 mb-1 block">Nội dung tập <span className="text-red-500">*</span></Text>
           <Select value={formData.focus} onChange={e => setFormData({...formData, focus: e.target.value})} className="w-full">
             {focuses.map(f => <option key={f} value={f}>{f}</option>)}
           </Select>
@@ -273,7 +293,7 @@ export function WorkoutAddView() {
         {/* Session Number & Status */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Số buổi (VD: 9/24) <span className="text-red-500">*</span></Text>
+            <Text className="text-sm text-gray-500 mb-1 block">Số buổi (VD: 9/24) <span className="text-red-500">*</span></Text>
             <Input
               type="number"
               value={formData.sessionNumber}
@@ -283,7 +303,7 @@ export function WorkoutAddView() {
             />
           </div>
           <div>
-            <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Trạng thái</Text>
+            <Text className="text-sm text-gray-500 mb-1 block">Trạng thái</Text>
             <Select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full">
               {statuses.map(s => <option key={s} value={s}>{s}</option>)}
             </Select>
@@ -292,12 +312,12 @@ export function WorkoutAddView() {
 
         {/* Notes */}
         <div>
-          <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Ghi chú</Text>
+          <Text className="text-sm text-gray-500 mb-1 block">Ghi chú</Text>
           <textarea
             value={formData.notes}
             onChange={e => setFormData({...formData, notes: e.target.value})}
             rows={3}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900"
             placeholder="Ghi chú thêm về buổi tập..."
           />
         </div>
@@ -343,7 +363,7 @@ export function WorkoutDetailView() {
   // Chưa chọn buổi tập (ví dụ tải lại trang): hiện nút quay lại
   if (!localSession) {
     return (
-      <Page className="bg-slate-100 dark:bg-slate-900 p-4">
+      <Page className="bg-slate-100 p-4">
         <BackButton onClick={() => navigate(-1)} />
       </Page>
     );
@@ -387,24 +407,24 @@ export function WorkoutDetailView() {
   };
 
   return (
-    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100 dark:bg-slate-900">
+    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100">
       {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
-        className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 pr-24"
+        className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 pr-24"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
         <BackButton onClick={() => navigate(-1)} />
         <div className="flex-1 min-w-0">
-          <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white truncate">Chi tiết buổi tập</Text.Title>
-          <Text className="text-sm text-gray-500 dark:text-gray-400">{localSession.clientName} • {formatDateLabel(localSession.date)}</Text>
+          <Text.Title size="xLarge" className="font-bold text-gray-900 truncate">Chi tiết buổi tập</Text.Title>
+          <Text className="text-sm text-gray-500">{localSession.clientName} • {formatDateLabel(localSession.date)}</Text>
         </div>
       </div>
 
       {/* Main Info Card */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-300 dark:border-slate-700 p-4 space-y-4">
+      <div className="bg-white rounded-xl border border-slate-300 p-4 space-y-4">
         {/* Time & Status */}
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <div className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-600">
+          <div className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg bg-slate-100 text-slate-700 border border-slate-200">
             {localSession.time}
           </div>
           <span className={`justify-center text-center inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-full ${statusStyle.bg}`}>
@@ -416,8 +436,8 @@ export function WorkoutDetailView() {
         <div className="flex items-center gap-3 pt-2">
           <Avatar size="large" src={client?.avatar || `https://i.pravatar.cc/150?u=${localSession.clientId || localSession.id}`} alt={localSession.clientName} />
           <div className="flex-1 min-w-0">
-            <Text.Title size="medium" className="font-semibold text-gray-900 dark:text-white">{localSession.clientName}</Text.Title>
-            <Text className="text-xs text-slate-500 dark:text-slate-400">{localSession.phone}</Text>
+            <Text.Title size="medium" className="font-semibold text-gray-900">{localSession.clientName}</Text.Title>
+            <Text className="text-xs text-slate-500">{localSession.phone}</Text>
           </div>
         </div>
 
@@ -439,18 +459,18 @@ export function WorkoutDetailView() {
       </div>
 
       {/* Notes Section */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-300 dark:border-slate-700 p-4 space-y-3">
-        <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Ghi chú buổi tập</Text.Title>
+      <div className="bg-white rounded-xl border border-slate-300 p-4 space-y-3">
+        <Text.Title size="medium" className="font-bold text-gray-900">Ghi chú buổi tập</Text.Title>
         {/* Existing notes list */}
         {localSession.notes && localSession.notes.length > 0 && (
           <div className="space-y-2">
             {localSession.notes.slice().reverse().map((note, idx) => (
-              <div key={note.id} className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-3 border border-slate-200 dark:border-slate-700 flex flex-col gap-1">
+              <div key={note.id} className="bg-slate-50 rounded-lg p-3 border border-slate-200 flex flex-col gap-1">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] opacity-75 uppercase">{note.time}</span>
                   <button onClick={() => handleDeleteNote(note.id)} className="inline-flex items-center justify-center text-center text-xs text-red-500 hover:text-red-700 font-medium px-2 py-0.5 rounded hover:bg-red-50">Xóa</button>
                 </div>
-                <Text className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-line">{note.text}</Text>
+                <Text className="text-xs text-gray-700 whitespace-pre-line">{note.text}</Text>
               </div>
             ))}
           </div>
@@ -461,22 +481,22 @@ export function WorkoutDetailView() {
             value={editNotes}
             onChange={e => setEditNotes(e.target.value)}
             rows={3}
-            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900"
             placeholder="Nhập ghi chú mới cho buổi tập..."
           />
           <div className="flex justify-end gap-2">
             <Button className="inline-flex items-center justify-center text-center" variant="primary" onClick={handleSaveNotes}>Lưu ghi chú mới</Button>
           </div>
           {saved && (
-            <Text className="text-xs text-green-600 dark:text-green-400">Đã lưu ghi chú!</Text>
+            <Text className="text-xs text-green-600">Đã lưu ghi chú!</Text>
           )}
         </div>
       </div>
 
       {/* Status Actions for Upcoming Sessions */}
       {(localSession.status === "Sắp tới" || localSession.status === "Cần nhắc lịch") && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-300 dark:border-slate-700 p-4 space-y-2">
-          <Text className="font-medium text-gray-900 dark:text-white">Cập nhật trạng thái</Text>
+        <div className="bg-white rounded-xl border border-slate-300 p-4 space-y-2">
+          <Text className="font-medium text-gray-900">Cập nhật trạng thái</Text>
           <div className="flex flex-wrap justify-end gap-2">
             <Button
               variant={localSession.status === "Đã hoàn thành" ? "primary" : "outline"}
@@ -516,14 +536,14 @@ export function WorkoutDetailView() {
 
       {/* Completed/Rescheduled Info */}
       {(localSession.status === "Đã hoàn thành" || localSession.status === "Đã dời lịch") && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
             
-            <Text className="font-medium text-green-800 dark:text-green-300">
+            <Text className="font-medium text-green-800">
               {localSession.status === "Đã hoàn thành" ? "Buổi tập đã hoàn thành" : "Buổi tập đã được dời lịch"}
             </Text>
           </div>
-          <Text className="text-sm text-green-700 dark:text-green-400">
+          <Text className="text-sm text-green-700">
             Trạng thái này không thể thay đổi. Tạo buổi tập mới nếu cần.
           </Text>
         </div>
@@ -642,18 +662,18 @@ export default function WorkoutsPage() {
 
   // ----- (4) GIAO DIỆN -----
   return (
-    <Page ref={scrollRef} className="bg-slate-100 dark:bg-slate-900 min-h-screen">
+    <Page ref={scrollRef} className="bg-slate-100 min-h-screen">
       <div>
           {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
           <div
-            className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
+            className="bg-white border-b border-gray-200 px-4 pb-3 sticky top-0 z-30 pr-24"
             style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
           >
             <div className="flex items-center gap-2">
               <BackButton onClick={() => navigate(-1)} />
               <div className="flex-1 min-w-0">
-                <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Lịch & Buổi tập</Text.Title>
-                <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý buổi tập học viên</Text>
+                <Text.Title size="xLarge" className="font-bold text-gray-900">Lịch & Buổi tập</Text.Title>
+                <Text className="text-sm text-gray-500">Quản lý buổi tập học viên</Text>
               </div>
             </div>
           </div>
@@ -669,7 +689,7 @@ export default function WorkoutsPage() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Tìm theo tên học viên hoặc nội dung tập..."
-                  className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <Button className="inline-flex items-center justify-center text-center" variant="primary" size="small" onClick={handleOpenAdd}>
@@ -688,7 +708,7 @@ export default function WorkoutsPage() {
                   onClick={() => setActiveFilter(f.key)}
                 >
                   {f.label}
-                  <span className="inline-flex items-center justify-center ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 dark:bg-white/10 text-center font-bold">
+                  <span className="inline-flex items-center justify-center ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 text-center font-bold">
                     {f.count}
                   </span>
                 </Button>
@@ -701,7 +721,7 @@ export default function WorkoutsPage() {
               {(groupedSessions.today && groupedSessions.today.length > 0) && (
                 <div className="px-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Hôm nay ({groupedSessions.today.length})</Text.Title>
+                    <Text.Title size="medium" className="font-bold text-gray-900">Hôm nay ({groupedSessions.today.length})</Text.Title>
                   </div>
                   <div className="flex flex-col space-y-4">
                     {groupedSessions.today.map(s => (
@@ -721,7 +741,7 @@ export default function WorkoutsPage() {
               {(groupedSessions.tomorrow && groupedSessions.tomorrow.length > 0) && (
                 <div className="px-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Ngày mai ({groupedSessions.tomorrow.length})</Text.Title>
+                    <Text.Title size="medium" className="font-bold text-gray-900">Ngày mai ({groupedSessions.tomorrow.length})</Text.Title>
                   </div>
                   <div className="flex flex-col space-y-4">
                     {groupedSessions.tomorrow.map(s => (
@@ -741,7 +761,7 @@ export default function WorkoutsPage() {
               {(groupedSessions.past && groupedSessions.past.length > 0) && (
                 <div className="px-4">
                   <div className="flex items-center gap-2 mb-3">
-                    <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Ngày trước ({groupedSessions.past.length})</Text.Title>
+                    <Text.Title size="medium" className="font-bold text-gray-900">Ngày trước ({groupedSessions.past.length})</Text.Title>
                   </div>
                   <div className="flex flex-col space-y-4">
                     {groupedSessions.past.map(s => (
@@ -759,10 +779,10 @@ export default function WorkoutsPage() {
 
               {/* Empty State */}
               {filteredSessions.length === 0 && (
-                <div className="bg-white rounded-xl shadow-sm p-8 text-center dark:bg-slate-800 dark:border dark:border-slate-700">
+                <div className="bg-white rounded-xl shadow-sm p-8 text-center">
                   
-                  <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white mb-1">Không tìm thấy buổi tập</Text.Title>
-                  <Text className="text-gray-500 dark:text-gray-400">
+                  <Text.Title size="medium" className="font-bold text-gray-900 mb-1">Không tìm thấy buổi tập</Text.Title>
+                  <Text className="text-gray-500">
                     {searchQuery ? "Thử từ khóa khác hoặc xóa bộ lọc" : "Chưa có buổi tập nào. Hãy thêm buổi tập đầu tiên!"}
                   </Text>
                 </div>

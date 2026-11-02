@@ -8,7 +8,7 @@ import bg from "../static/bg.svg";
 function HomePage() {
   return (
     <Page
-      className="flex flex-col items-center justify-center space-y-6 bg-cover bg-center bg-no-repeat bg-white dark:bg-black"
+      className="flex flex-col items-center justify-center space-y-6 bg-cover bg-center bg-no-repeat bg-white"
       style={{
         backgroundImage: `url(${bg})`,
       }}

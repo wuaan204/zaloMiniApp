@@ -28,11 +28,11 @@ function formatDate(dateStr) {
 }
 function pillClasses(type, daysSince) {
   // type: 'goal' | 'package' | 'contact'
-  if (type === 'goal') return "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800";
-  if (type === 'package') return "bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300 dark:border-indigo-800";
+  if (type === 'goal') return "bg-blue-50 text-blue-700 border border-blue-200";
+  if (type === 'package') return "bg-indigo-50 text-indigo-700 border border-indigo-200";
   // contact
-  if (daysSince >= 7) return "bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800";
-  return "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800";
+  if (daysSince >= 7) return "bg-red-50 text-red-700 border border-red-200";
+  return "bg-emerald-50 text-emerald-700 border border-emerald-200";
 }
 
 // ============================================
@@ -46,7 +46,7 @@ function ClientCard({ client, onClick }) {
 
   return (
     <div
-      className="bg-white rounded-xl border border-slate-300 shadow-sm p-4 cursor-pointer hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700 transition-colors"
+      className="bg-white rounded-xl border border-slate-300 shadow-sm p-4 cursor-pointer hover:bg-slate-50 transition-colors"
       onClick={() => onClick(client)}
     >
       <div className="flex items-start gap-3">
@@ -54,14 +54,14 @@ function ClientCard({ client, onClick }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-2">
             <div className="flex-1 min-w-0">
-              <Text.Title size="medium" className="font-semibold text-gray-900 dark:text-white truncate">{client.name}</Text.Title>
-              <Text className="text-sm text-gray-500 dark:text-gray-400">{client.phone}</Text>
+              <Text.Title size="medium" className="font-semibold text-gray-900 truncate">{client.name}</Text.Title>
+              <Text className="text-sm text-gray-500">{client.phone}</Text>
             </div>
             <span className={`justify-center text-center inline-flex items-center px-2.5 py-0.5 text-xs font-medium rounded-full ${
-              statusInfo.variant === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-              statusInfo.variant === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
-              statusInfo.variant === 'danger' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-              'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+              statusInfo.variant === 'success' ? 'bg-green-100 text-green-800' :
+              statusInfo.variant === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+              statusInfo.variant === 'danger' ? 'bg-red-100 text-red-800' :
+              'bg-gray-100 text-gray-800'
             }`}>
               {statusInfo.text}
             </span>
@@ -83,10 +83,10 @@ function ClientCard({ client, onClick }) {
           {/* Progress Bar */}
           <div className="mb-2">
             <div className="flex justify-between text-xs mb-1">
-              <Text className="text-gray-500 dark:text-gray-400">Tiến độ</Text>
-              <Text className="font-medium text-gray-900 dark:text-white">{client.completedSessions}/{client.totalSessions} buổi</Text>
+              <Text className="text-gray-500">Tiến độ</Text>
+              <Text className="font-medium text-gray-900">{client.completedSessions}/{client.totalSessions} buổi</Text>
             </div>
-            <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
               <div className="h-full bg-blue-600 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
             </div>
           </div>
@@ -128,32 +128,32 @@ export function ClientAddView() {
     navigate(-1);
   };
   return (
-    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100 dark:bg-slate-900">
+    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100">
       {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
-        className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 pr-24"
+        className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 pr-24"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
         <BackButton onClick={() => navigate(-1)} />
         <div className="flex-1 min-w-0">
-          <Text.Title size="large" className="font-bold text-gray-900 dark:text-white truncate">Thêm học viên mới</Text.Title>
-          <Text className="text-sm text-gray-500 dark:text-gray-400">Điền thông tin cơ bản của học viên</Text>
+          <Text.Title size="large" className="font-bold text-gray-900 truncate">Thêm học viên mới</Text.Title>
+          <Text className="text-sm text-gray-500">Điền thông tin cơ bản của học viên</Text>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-4">
-        <div><Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Họ tên <span className="text-red-500">*</span></Text>
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
+        <div><Text className="text-sm text-gray-500 mb-1 block">Họ tên <span className="text-red-500">*</span></Text>
           <Input value={formData.name} onChange={e=>setFormData({...formData,name:e.target.value})} placeholder="Nguyễn Văn A" className="w-full" /></div>
-        <div><Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Số điện thoại <span className="text-red-500">*</span></Text>
+        <div><Text className="text-sm text-gray-500 mb-1 block">Số điện thoại <span className="text-red-500">*</span></Text>
           <Input type="tel" value={formData.phone} onChange={e=>setFormData({...formData,phone:e.target.value})} placeholder="0901 234 567" className="w-full" /></div>
-        <div><Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Mục tiêu tập</Text>
+        <div><Text className="text-sm text-gray-500 mb-1 block">Mục tiêu tập</Text>
           <Select value={formData.goal} onChange={e=>setFormData({...formData,goal:e.target.value})} className="w-full">{goals.map(g=><option key={g} value={g}>{g}</option>)}</Select></div>
-        <div><Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Gói tập</Text>
+        <div><Text className="text-sm text-gray-500 mb-1 block">Gói tập</Text>
           <Select value={formData.packageName} onChange={e=>setFormData({...formData,packageName:e.target.value})} className="w-full">{packages.map(p=><option key={p} value={p}>{p}</option>)}</Select></div>
-        <div><Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Tổng số buổi</Text>
+        <div><Text className="text-sm text-gray-500 mb-1 block">Tổng số buổi</Text>
           <Input type="number" value={formData.totalSessions} onChange={e=>setFormData({...formData,totalSessions:parseInt(e.target.value)||0})} min="1" className="w-full" /></div>
-        <div><Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Ghi chú</Text>
-          <textarea value={formData.notes} onChange={e=>setFormData({...formData,notes:e.target.value})} rows={3} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white" placeholder="Ghi chú thêm về học viên..." /></div>
+        <div><Text className="text-sm text-gray-500 mb-1 block">Ghi chú</Text>
+          <textarea value={formData.notes} onChange={e=>setFormData({...formData,notes:e.target.value})} rows={3} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900" placeholder="Ghi chú thêm về học viên..." /></div>
         <div className="flex justify-end gap-2 pt-2"><Button className="inline-flex items-center justify-center text-center" variant="outline" type="button" onClick={() => navigate(-1)}>Hủy</Button><Button className="inline-flex items-center justify-center text-center" variant="primary" type="submit">Thêm học viên</Button></div>
       </form>
     </Page>
@@ -197,7 +197,7 @@ export function ClientDetailView() {
   // Chưa chọn học viên (ví dụ tải lại trang): hiện nút quay lại
   if (!client) {
     return (
-      <Page className="bg-slate-100 dark:bg-slate-900 p-4">
+      <Page className="bg-slate-100 p-4">
         <BackButton onClick={() => navigate(-1)} />
       </Page>
     );
@@ -207,23 +207,23 @@ export function ClientDetailView() {
   const statusInfo = getStatusBadge(client.status);
 
   return (
-    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100 dark:bg-slate-900">
+    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100">
       {/* Header inside page — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
-        className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-slate-100 dark:bg-slate-900 z-30 px-0 pr-24"
+        className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 px-0 pr-24"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
       >
         <BackButton onClick={() => navigate(-1)} />
         <Avatar size="xlarge" src={client.avatar} alt={client.name} />
         <div className="flex-1 min-w-0">
-          <Text.Title size="large" className="font-bold text-gray-900 dark:text-white truncate">{client.name}</Text.Title>
-          <Text className="text-gray-500 dark:text-gray-400">{client.phone}</Text>
+          <Text.Title size="large" className="font-bold text-gray-900 truncate">{client.name}</Text.Title>
+          <Text className="text-gray-500">{client.phone}</Text>
         </div>
         <span className={`justify-center text-center inline-flex items-center px-3 py-1 text-sm font-medium rounded-full ${
-          statusInfo.variant==='success'?'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400':
-          statusInfo.variant==='warning'?'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400':
-          statusInfo.variant==='danger'?'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400':
-          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
+          statusInfo.variant==='success'?'bg-green-100 text-green-800':
+          statusInfo.variant==='warning'?'bg-yellow-100 text-yellow-800':
+          statusInfo.variant==='danger'?'bg-red-100 text-red-800':
+          'bg-gray-100 text-gray-800'}`}>
           {statusInfo.text}
         </span>
       </div>
@@ -245,63 +245,63 @@ export function ClientDetailView() {
       </div>
 
       {/* Progress Section */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+      <div className="bg-white rounded-xl border border-slate-200 p-4">
         <div className="flex items-center justify-between mb-2">
-          <Text className="font-medium text-gray-900 dark:text-white">Tiến độ buổi tập</Text>
+          <Text className="font-medium text-gray-900">Tiến độ buổi tập</Text>
           <div className="flex items-center gap-2">
-            <Text className="font-semibold text-gray-900 dark:text-white">{client.completedSessions}/{client.totalSessions}</Text>
+            <Text className="font-semibold text-gray-900">{client.completedSessions}/{client.totalSessions}</Text>
             <Button size="small" variant="primary" className="text-center w-8 h-8 p-0 flex items-center justify-center rounded-full" onClick={handleAddSession} disabled={client.completedSessions>=client.totalSessions}>
               <span className="text-white text-xl font-bold leading-none">+</span>
             </Button>
           </div>
         </div>
-        <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
           <div className="h-full bg-blue-600 rounded-full transition-all duration-300" style={{width:`${progress}%`}} />
         </div>
-        <Text className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">{progress}% hoàn thành</Text>
+        <Text className="text-xs text-gray-500 mt-1 text-right">{progress}% hoàn thành</Text>
       </div>
 
       {/* Notes */}
       {client.notes && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
-          <div className="flex items-center gap-1 mb-1"><Text className="text-sm font-medium text-blue-800 dark:text-blue-300">Ghi chú chung</Text></div>
-          <Text className="text-sm text-blue-700 dark:text-blue-400">{client.notes}</Text>
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <div className="flex items-center gap-1 mb-1"><Text className="text-sm font-medium text-blue-800">Ghi chú chung</Text></div>
+          <Text className="text-sm text-blue-700">{client.notes}</Text>
         </div>
       )}
 
       {/* Interaction Logs */}
       <div className="flex items-center justify-between">
-        <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Nhật ký tương tác</Text.Title>
+        <Text.Title size="medium" className="font-bold text-gray-900">Nhật ký tương tác</Text.Title>
         <Button size="small" variant="primary" className="text-center w-8 h-8 p-0 flex items-center justify-center rounded-full" onClick={()=>setShowAddInteraction(!showAddInteraction)}>
           <span className="text-white text-xl font-bold leading-none">{showAddInteraction?'×':'+'}</span>
         </Button>
       </div>
 
       {showAddInteraction && (
-        <form onSubmit={handleAddInteraction} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
-          <div><Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Nội dung trao đổi <span className="text-red-500">*</span></Text>
-            <textarea value={newInteraction.content} onChange={e=>setNewInteraction({...newInteraction,content:e.target.value})} rows={3} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="Ví dụ: Đã trao đổi về menu ăn, khách hàng phản hồi khỏe..." required /></div>
-          <div><Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Việc cần làm tiếp theo</Text>
-            <textarea value={newInteraction.nextAction} onChange={e=>setNewInteraction({...newInteraction,nextAction:e.target.value})} rows={2} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" placeholder="Ví dụ: Gửi file menu qua Zalo, đặt lịch buổi tới..." /></div>
+        <form onSubmit={handleAddInteraction} className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+          <div><Text className="text-sm text-gray-500 mb-1 block">Nội dung trao đổi <span className="text-red-500">*</span></Text>
+            <textarea value={newInteraction.content} onChange={e=>setNewInteraction({...newInteraction,content:e.target.value})} rows={3} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900" placeholder="Ví dụ: Đã trao đổi về menu ăn, khách hàng phản hồi khỏe..." required /></div>
+          <div><Text className="text-sm text-gray-500 mb-1 block">Việc cần làm tiếp theo</Text>
+            <textarea value={newInteraction.nextAction} onChange={e=>setNewInteraction({...newInteraction,nextAction:e.target.value})} rows={2} className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900" placeholder="Ví dụ: Gửi file menu qua Zalo, đặt lịch buổi tới..." /></div>
           <div className="flex justify-end gap-2"><Button className="inline-flex items-center justify-center text-center" variant="outline" type="button" onClick={()=>setShowAddInteraction(false)}>Hủy</Button><Button className="inline-flex items-center justify-center text-center" variant="primary" type="submit">Lưu ghi chú</Button></div>
         </form>
       )}
 
       <div className="space-y-3">
         {client.interactionLogs.length===0 ? (
-          <div className="text-center py-6 text-gray-500 dark:text-gray-400"><Text>Chưa có ghi chú tương tác</Text></div>
+          <div className="text-center py-6 text-gray-500"><Text>Chưa có ghi chú tương tác</Text></div>
         ) : (
           client.interactionLogs.map((log,i)=>(
-            <div key={i} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+            <div key={i} className="bg-white rounded-xl border border-slate-200 p-4">
               <div className="flex items-start justify-between gap-2 mb-2">
-                <Text className="text-xs text-gray-500 dark:text-gray-400 font-medium">{formatDate(log.date)}</Text>
-                <Text className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded">Tương tác</Text>
+                <Text className="text-xs text-gray-500 font-medium">{formatDate(log.date)}</Text>
+                <Text className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">Tương tác</Text>
               </div>
-              <Text className="text-sm text-gray-900 dark:text-white mb-2">{log.content}</Text>
+              <Text className="text-sm text-gray-900 mb-2">{log.content}</Text>
               {log.nextAction && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-2">
-                  <div className="flex items-center gap-1 text-xs text-yellow-800 dark:text-yellow-300 mb-1"><Text className="font-medium">Việc cần làm:</Text></div>
-                  <Text className="text-sm text-yellow-700 dark:text-yellow-400">{log.nextAction}</Text>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2">
+                  <div className="flex items-center gap-1 text-xs text-yellow-800 mb-1"><Text className="font-medium">Việc cần làm:</Text></div>
+                  <Text className="text-sm text-yellow-700">{log.nextAction}</Text>
                 </div>
               )}
             </div>
@@ -381,17 +381,17 @@ export default function ClientsPage() {
 
   // ----- (4) GIAO DIỆN -----
   return (
-    <Page ref={scrollRef} className="bg-slate-100 dark:bg-slate-900 min-h-screen">
+    <Page ref={scrollRef} className="bg-slate-100 min-h-screen">
       {/* Thanh tiêu đề: chừa chỗ cho thanh trạng thái và nút capsule của Zalo */}
       <div
-        className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
+        className="bg-white border-b border-gray-200 px-4 pb-3 sticky top-0 z-30 pr-24"
         style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
       >
         <div className="flex items-center gap-2">
           <BackButton onClick={() => navigate(-1)} />
           <div className="flex-1 min-w-0">
-            <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Học viên</Text.Title>
-            <Text className="text-sm text-gray-500 dark:text-gray-400">Quản lý học viên</Text>
+            <Text.Title size="xLarge" className="font-bold text-gray-900">Học viên</Text.Title>
+            <Text className="text-sm text-gray-500">Quản lý học viên</Text>
           </div>
         </div>
       </div>
@@ -401,7 +401,7 @@ export default function ClientsPage() {
         <div className="flex gap-3">
           <div className="relative flex-1">
             <SearchIcon />
-            <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Tìm theo tên hoặc SĐT..." className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input type="search" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Tìm theo tên hoặc SĐT..." className="w-full pl-9 pr-4 h-9 text-sm px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           <Button className="inline-flex items-center justify-center text-center" variant="primary" size="small" onClick={handleOpenAdd}>
             + Thêm HV
@@ -413,7 +413,7 @@ export default function ClientsPage() {
           {filters.map((f) => (
             <Button key={f.key} variant={activeFilter === f.key ? "primary" : "outline"} size="small" className="justify-center text-center inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0" onClick={() => setActiveFilter(f.key)}>
               {f.label}
-              <span className="inline-flex items-center justify-center ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 dark:bg-white/10 text-center font-bold">{f.count}</span>
+              <span className="inline-flex items-center justify-center ml-1 min-w-[18px] px-1.5 py-0.5 text-[10px] rounded-full bg-white/30 text-center font-bold">{f.count}</span>
             </Button>
           ))}
         </div>
@@ -423,9 +423,9 @@ export default function ClientsPage() {
           {filteredClients.length > 0 ? (
             filteredClients.map((c) => <ClientCard key={c.id} client={c} onClick={handleOpenDetail} />)
           ) : (
-            <div className="bg-white rounded-xl shadow-sm p-8 text-center dark:bg-slate-800 dark:border dark:border-slate-700">
-              <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white mb-1">Không tìm thấy học viên</Text.Title>
-              <Text className="text-gray-500 dark:text-gray-400">{searchQuery ? "Thử từ khóa khác hoặc xóa bộ lọc" : "Chưa có học viên nào. Hãy thêm học viên đầu tiên!"}</Text>
+            <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+              <Text.Title size="medium" className="font-bold text-gray-900 mb-1">Không tìm thấy học viên</Text.Title>
+              <Text className="text-gray-500">{searchQuery ? "Thử từ khóa khác hoặc xóa bộ lọc" : "Chưa có học viên nào. Hãy thêm học viên đầu tiên!"}</Text>
             </div>
           )}
         </div>
