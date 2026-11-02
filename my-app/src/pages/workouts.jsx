@@ -241,14 +241,34 @@ export function WorkoutAddView() {
 
         {/* Date & Time */}
         <div className="grid grid-cols-2 gap-3">
-          <div>
+          <div className="min-w-0">
             <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Ngày tập <span className="text-red-500">*</span></Text>
-            <Input
-              type="date"
-              value={formData.date}
-              onChange={e => setFormData({...formData, date: e.target.value})}
-              className="w-full"
-            />
+            {/* Khung bọc chặt: giữ input luôn nằm trong cột, không tràn ra ngoài trên iOS */}
+            <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="block w-full max-w-full min-w-0 box-border appearance-none bg-transparent px-3 py-2.5 pr-10 text-sm text-slate-800 focus:outline-none"
+                style={{ WebkitAppearance: 'none', minWidth: 0, width: '100%' }}
+              />
+              {/* Icon lịch vẽ bằng SVG để iOS luôn hiển thị icon sắc nét */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            </div>
           </div>
           <div>
             <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Khung giờ <span className="text-red-500">*</span></Text>

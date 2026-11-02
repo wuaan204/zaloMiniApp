@@ -1,10 +1,10 @@
 import { Page, Text, Avatar, Button, useNavigate } from "zmp-ui";
 import React, { useEffect, useRef } from "react";
 import { BackButton } from "../components/icons";
-import { useAppContext } from "../context/AppContext";
+import { useAppContext, today, tomorrow } from "../context/AppContext";
 import { saveScroll, restoreScroll, resetScroll } from "../utils/scroll";
 
-// Mock data for dashboard stats — svgIcon is inline SVG for each card
+// Icon SVG cho 4 thẻ thống kê
 const SvgUsers = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
     <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-5-3.87M9 20H4v-2a4 4 0 015-3.87M15 11a4 4 0 10-8 0 4 4 0 008 0zm6-4a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -26,6 +26,7 @@ const SvgChart = () => (
   </svg>
 );
 
+// Dữ liệu mẫu cho 4 thẻ thống kê
 const stats = [
   { label: "Tổng học viên",     value: "42",  color: "text-blue-600",   bg: "bg-blue-50",   SvgIcon: SvgUsers },
   { label: "Đi tập tuần này",   value: "28",  color: "text-green-600",  bg: "bg-green-50",  SvgIcon: SvgCheckCircle },
@@ -33,7 +34,7 @@ const stats = [
   { label: "Bản ghi InBody",    value: "156", color: "text-orange-600", bg: "bg-orange-50", SvgIcon: SvgChart },
 ];
 
-// Mock data for inactive clients (7-10 days) — enriched with full profile info
+// Dữ liệu mẫu cho danh sách học viên cần theo dõi (7-10 ngày)
 const inactiveClients = [
   {
     id: 1, name: "Nguyễn Văn An", lastActive: "8 ngày chưa tương tác",
@@ -87,6 +88,15 @@ const inactiveClients = [
   },
 ];
 
+// Nhãn ngày dễ đọc cho phần "Buổi tập sắp tới" (Hôm nay / Ngày mai / 16/10)
+function sessionDayLabel(dateStr) {
+  if (dateStr === today) return "Hôm nay";
+  if (dateStr === tomorrow) return "Ngày mai";
+  const [, m, d] = dateStr.split("-");
+  return `${d}/${m}`;
+}
+
+// Thẻ 1 chỉ số thống kê
 function StatCard({ label, value, SvgIcon, color, bg }) {
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3 dark:bg-gray-800 dark:border dark:border-gray-700">
@@ -117,7 +127,27 @@ function InactiveClientCard({ client, onClick }) {
         <span className="inline-flex items-center justify-center text-center bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 rounded-full text-xs font-semibold">
           {client.lastActive}
         </span>
-        
+      </div>
+    </div>
+  );
+}
+
+// Dòng xem nhanh 1 buổi tập sắp tới
+function UpcomingSessionRow({ session, onClick }) {
+  return (
+    <div
+      className="bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-300 p-3 flex items-center gap-3 cursor-pointer"
+      onClick={onClick}
+    >
+      {/* Cột trái: ngày + giờ bắt đầu */}
+      <div className="flex flex-col items-center justify-center flex-shrink-0 w-14">
+        <span className="text-[10px] font-semibold uppercase text-slate-500 leading-tight">{sessionDayLabel(session.date)}</span>
+        <span className="text-xs font-bold text-slate-800 leading-tight">{session.time.split(" - ")[0]}</span>
+      </div>
+      {/* Cột phải: tên học viên + nội dung tập */}
+      <div className="flex-1 min-w-0">
+        <Text.Title size="medium" className="font-semibold text-gray-900 dark:text-white truncate">{session.clientName}</Text.Title>
+        <Text className="text-xs text-gray-500 dark:text-gray-400 truncate">{session.focus}</Text>
       </div>
     </div>
   );
@@ -265,14 +295,15 @@ export function DashboardClientDetail() {
 function DashboardPage() {
   const navigate = useNavigate();
 
-  // Lấy hàm lưu học viên đang chọn từ Context dùng chung
-  const { setSelectedInactiveClient } = useAppContext();
+  // Lấy hàm lưu học viên đang chọn + danh sách buổi tập từ Context dùng chung
+  const { setSelectedInactiveClient, sessions, isDarkMode, toggleDarkMode } = useAppContext();
 
   // ----- (2) STATE & REF -----
   // Scroll ref riêng biệt cho Dashboard, không ảnh hưởng trang khác
   const scrollRef = useRef(null);
 
-  // ----- (2) STATE -----
+  // Ref trỏ tới khu vực "Học viên cần theo dõi" để nút danh mục cuộn xuống đúng chỗ
+  const inactiveSectionRef = useRef(null);
 
   // Khi vào trang: khôi phục vị trí cuộn đã lưu (nếu có)
   useEffect(() => {
@@ -298,6 +329,19 @@ function DashboardPage() {
     navigate("/dashboard-client");
   };
 
+  // Nút "Học viên cần theo dõi": cuộn xuống đúng khu vực này trong cùng trang
+  const handleScrollToInactive = () => {
+    if (inactiveSectionRef.current) {
+      inactiveSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  // 3 buổi tập sắp tới gần nhất để xem nhanh ở cuối trang
+  const upcomingSessions = [...sessions]
+    .filter((s) => s.status === "Sắp tới" || s.status === "Cần nhắc lịch")
+    .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+    .slice(0, 3);
+
   // ----- (4) GIAO DIỆN -----
   return (
     <Page ref={scrollRef} className="bg-gray-50 dark:bg-gray-900 min-h-screen">
@@ -308,32 +352,73 @@ function DashboardPage() {
           className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 pb-3 sticky top-0 z-30 pr-24"
           style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
         >
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
             <div className="flex-1 min-w-0">
               <Text.Title size="xLarge" className="font-bold text-gray-900 dark:text-white">Tổng quan</Text.Title>
               <Text className="text-sm text-gray-500 dark:text-gray-400">Xin chào! Dưới đây là tình hình học viên hôm nay.</Text>
             </div>
+            {/* Nút đổi chế độ Sáng / Tối — nằm bên trái vùng capsule của Zalo nên không bị che */}
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors flex items-center justify-center text-center ${
+                isDarkMode
+                  ? "bg-slate-700 border-slate-600 text-slate-100 active:bg-slate-600"
+                  : "bg-slate-100 border-slate-300 text-slate-700 active:bg-slate-200"
+              }`}
+            >
+              {isDarkMode ? "Chế độ: Tối" : "Chế độ: Sáng"}
+            </button>
           </div>
-        </div>
-
-        {/* Sub-header: Action Button Row — sits below the title bar, fully clickable */}
-        <div className="px-4 pt-3 pb-1 flex justify-end">
-          <Button className="inline-flex items-center justify-center text-center" variant="primary" size="small" onClick={() => goTo('/clients')}>
-            + Thêm học viên
-          </Button>
         </div>
 
         {/* Content — chỉ <Page> cuộn, không lồng thêm vùng cuộn */}
         <div className="p-4 space-y-6 pb-28">
-          {/* Stats Grid */}
+          {/* (1) 4 thẻ thống kê — lưới 2x2 */}
           <div className="grid grid-cols-2 gap-3">
             {stats.map((stat, index) => (
               <StatCard key={index} {...stat} />
             ))}
           </div>
 
-          {/* Inactive Clients Section */}
-          <div className="bg-white rounded-xl shadow-sm dark:bg-gray-800 dark:border dark:border-gray-700">
+          {/* (2) Danh mục quản lý — đặt ngay dưới thẻ thống kê để PT vào nhanh tính năng chính */}
+          <div className="bg-white rounded-xl shadow-sm p-4 space-y-3 dark:bg-gray-800 dark:border dark:border-gray-700">
+            <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Danh mục quản lý</Text.Title>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Mỗi nút giữ nền pastel; trạng thái nhấn chỉ đậm hơn 1 cấp (100 -> 200) và chữ vẫn đậm 800/900 để luôn đọc được */}
+              <Button
+                className="bg-blue-100 hover:bg-blue-100 focus:bg-blue-100 active:bg-blue-200 text-blue-800 focus:text-blue-800 active:text-blue-900 border border-blue-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
+                onClick={() => goTo('/clients')}
+              >
+                Quản lý học viên
+              </Button>
+              <Button
+                className="bg-indigo-100 hover:bg-indigo-100 focus:bg-indigo-100 active:bg-indigo-200 text-indigo-800 focus:text-indigo-800 active:text-indigo-900 border border-indigo-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
+                onClick={() => goTo('/workouts')}
+              >
+                Lịch & Buổi tập
+              </Button>
+              <Button
+                className="bg-emerald-100 hover:bg-emerald-100 focus:bg-emerald-100 active:bg-emerald-200 text-emerald-800 focus:text-emerald-800 active:text-emerald-900 border border-emerald-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
+                onClick={() => goTo('/progress')}
+              >
+                Chỉ số InBody
+              </Button>
+              <Button
+                className="bg-rose-100 hover:bg-rose-100 focus:bg-rose-100 active:bg-rose-200 text-rose-800 focus:text-rose-800 active:text-rose-900 border border-rose-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
+                onClick={handleScrollToInactive}
+              >
+                Học viên cần theo dõi
+              </Button>
+            </div>
+          </div>
+
+          {/* (3) Học viên cần theo dõi (7-10 ngày) */}
+          <div ref={inactiveSectionRef} className="bg-white rounded-xl shadow-sm dark:bg-gray-800 dark:border dark:border-gray-700">
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <Text.Title size="large" className="font-bold text-gray-900 dark:text-white">
                 Học viên cần theo dõi (7-10 ngày)
@@ -346,29 +431,27 @@ function DashboardPage() {
               ))}
               {inactiveClients.length === 0 && (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  
                   <Text>Không có học viên cần hỏi thăm. Tuyệt vời!</Text>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Management Menu */}
-          <div className="bg-white rounded-xl shadow-sm p-4 space-y-3 dark:bg-gray-800 dark:border dark:border-gray-700">
-            <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Danh mục quản lý</Text.Title>
-            <div className="grid grid-cols-2 gap-3">
-              <Button className="bg-blue-100 border-2 border-blue-300 text-blue-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/clients')}>
-                Quản lý học viên
-              </Button>
-              <Button className="bg-indigo-100 border-2 border-indigo-300 text-indigo-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/workouts')}>
-                Lịch & Buổi tập
-              </Button>
-              <Button className="bg-emerald-100 border-2 border-emerald-300 text-emerald-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/progress')}>
-                Chỉ số InBody
-              </Button>
-              <Button className="bg-amber-100 border-2 border-amber-300 text-amber-800 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm" onClick={() => goTo('/workouts')}>
-                Đặt lịch tập mới
-              </Button>
+          {/* (4) Buổi tập sắp tới — xem nhanh ở cuối trang */}
+          <div className="bg-white rounded-xl shadow-sm dark:bg-gray-800 dark:border dark:border-gray-700">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <Text.Title size="large" className="font-bold text-gray-900 dark:text-white">Buổi tập sắp tới</Text.Title>
+              <Button className="inline-flex items-center justify-center text-center" variant="text" size="small" onClick={() => goTo('/workouts')}>Xem lịch</Button>
+            </div>
+            <div className="p-4 space-y-3">
+              {upcomingSessions.map((session) => (
+                <UpcomingSessionRow key={session.id} session={session} onClick={() => goTo('/workouts')} />
+              ))}
+              {upcomingSessions.length === 0 && (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  <Text>Chưa có buổi tập nào sắp tới.</Text>
+                </div>
+              )}
             </div>
           </div>
         </div>
