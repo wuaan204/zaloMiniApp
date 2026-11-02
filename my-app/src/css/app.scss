@@ -175,7 +175,56 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   padding: 0;
 }
 
-/* ---------- 6) Chặn lần cuối khi thiết bị đang bật Dark Mode ---------- */
+/* ---------- 6) THANH TRẠNG THÁI (giờ, Wi-Fi, pin): luôn chữ & icon đen ---------- */
+/* Trên simulator / Zalo DevTools, khi máy bật Dark Mode thanh trạng thái có thể
+   tự đổi chữ và icon sang trắng -> mất hút trên header trắng của app.
+   Các rule dưới CHỈ nhắm vào thanh trạng thái, không nhắm vào nút bấm trong app,
+   nên nút Back xanh (bg-blue-600) và các nút primary vẫn giữ icon/chữ trắng. */
+.zaui-status-bar,
+.zaui-statusbar,
+[class*="status-bar"],
+[class*="statusbar"],
+[class*="StatusBar"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Chữ bên trong thanh trạng thái: giờ, phần trăm pin... */
+.zaui-status-bar span,
+.zaui-status-bar div,
+.zaui-status-bar p,
+.zaui-statusbar span,
+.zaui-statusbar div,
+.zaui-statusbar p,
+[class*="status-bar"] span,
+[class*="status-bar"] div,
+[class*="status-bar"] p,
+[class*="statusbar"] span,
+[class*="statusbar"] div,
+[class*="statusbar"] p,
+[class*="StatusBar"] span,
+[class*="StatusBar"] div,
+[class*="StatusBar"] p {
+  color: #0f172a !important;
+}
+
+/* Icon SVG bên trong thanh trạng thái: sóng Wi-Fi, viên pin */
+.zaui-status-bar svg,
+.zaui-status-bar svg *,
+.zaui-statusbar svg,
+.zaui-statusbar svg *,
+[class*="status-bar"] svg,
+[class*="status-bar"] svg *,
+[class*="statusbar"] svg,
+[class*="statusbar"] svg *,
+[class*="StatusBar"] svg,
+[class*="StatusBar"] svg * {
+  color: #0f172a !important;
+  fill: #0f172a !important;
+  stroke: #0f172a !important;
+}
+
+/* ---------- 7) Chặn lần cuối khi thiết bị đang bật Dark Mode ---------- */
 /* Đây là "lưới an toàn": kể cả khi hệ điều hành / Zalo WebView báo dark,
    mọi thành phần bên dưới vẫn giữ đúng nền sáng và chữ xanh đen. */
 @media (prefers-color-scheme: dark) {
@@ -232,5 +281,43 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     --zaui-light-input-background-color: #ffffff;
     --zaui-light-input-text-color: #0f172a;
     --zaui-light-bottom-navigation-background-color: #ffffff;
+  }
+
+  /* Thanh trạng thái: nhắc lại lần nữa để chắc chắn không bị đổi sang trắng */
+  .zaui-status-bar,
+  .zaui-statusbar,
+  [class*="status-bar"],
+  [class*="statusbar"],
+  [class*="StatusBar"] {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  .zaui-status-bar span,
+  .zaui-status-bar div,
+  .zaui-status-bar p,
+  [class*="status-bar"] span,
+  [class*="status-bar"] div,
+  [class*="status-bar"] p,
+  [class*="statusbar"] span,
+  [class*="statusbar"] div,
+  [class*="statusbar"] p,
+  [class*="StatusBar"] span,
+  [class*="StatusBar"] div,
+  [class*="StatusBar"] p {
+    color: #0f172a !important;
+  }
+
+  .zaui-status-bar svg,
+  .zaui-status-bar svg *,
+  [class*="status-bar"] svg,
+  [class*="status-bar"] svg *,
+  [class*="statusbar"] svg,
+  [class*="statusbar"] svg *,
+  [class*="StatusBar"] svg,
+  [class*="StatusBar"] svg * {
+    color: #0f172a !important;
+    fill: #0f172a !important;
+    stroke: #0f172a !important;
   }
 }

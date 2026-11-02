@@ -1,9 +1,10 @@
 {
   "app": {
     "title": "My App",
+    "headerColor": "#ffffff",
     "textColor": {
       "light": "black",
-      "dark": "white"
+      "dark": "black"
     },
     "statusBar": "transparent",
     "actionBarHidden": true,

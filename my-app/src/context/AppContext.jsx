@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
+// API của Zalo: đổi màu chữ & icon trên thanh action bar / status bar
+import { configAppView } from "zmp-sdk/apis";
 
 // ============================================
 // (1) DỮ LIỆU MẪU (mock data) dùng chung cho toàn app
@@ -430,6 +432,18 @@ export function AppProvider({ children }) {
   // Học viên kèm bản ghi InBody và id học viên đang xem ở trang Tiến độ
   const [progressClients, setProgressClients] = useState(initialProgressClients);
   const [selectedProgressClientId, setSelectedProgressClientId] = useState(initialProgressClients[0].id);
+
+  // ----- STATUS BAR: LUÔN CHỮ & ICON MÀU ĐEN -----
+  // Chạy 1 lần khi app khởi động. Nhờ vậy dù điện thoại bật Dark Mode (icon trắng)
+  // thì Zalo vẫn vẽ lại giờ, sóng Wi-Fi, pin màu đen trên header trắng của app.
+  useEffect(() => {
+    try {
+      // configAppView trả về Promise nên cần .catch để không lỗi khi chạy ngoài Zalo
+      configAppView({ headerTextColor: "black", statusBarType: "transparent" }).catch(() => {});
+    } catch (error) {
+      // Trình duyệt không có API của Zalo -> bỏ qua, app vẫn chạy bình thường
+    }
+  }, []);
 
   // ----- (3) HANDLERS: học viên -----
 
