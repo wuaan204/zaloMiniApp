@@ -146,8 +146,13 @@ function UpcomingSessionRow({ session, onClick }) {
       </div>
       {/* Cột phải: tên học viên + nội dung tập */}
       <div className="flex-1 min-w-0">
+<<<<<<< HEAD
         <Text.Title size="medium" className="font-semibold text-gray-900 truncate">{session.clientName}</Text.Title>
         <Text className="text-xs text-gray-500 truncate">{session.focus}</Text>
+=======
+        <Text.Title size="medium" className="font-semibold text-gray-900 dark:text-white truncate">{session.clientName}</Text.Title>
+        <Text className="text-xs text-gray-500 dark:text-gray-400 truncate">{session.focus}</Text>
+>>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
       </div>
     </div>
   );
@@ -296,7 +301,11 @@ function DashboardPage() {
   const navigate = useNavigate();
 
   // Lấy hàm lưu học viên đang chọn + danh sách buổi tập từ Context dùng chung
+<<<<<<< HEAD
   const { setSelectedInactiveClient, sessions } = useAppContext();
+=======
+  const { setSelectedInactiveClient, sessions, isDarkMode, toggleDarkMode } = useAppContext();
+>>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
 
   // ----- (2) STATE & REF -----
   // Scroll ref riêng biệt cho Dashboard, không ảnh hưởng trang khác
@@ -357,6 +366,18 @@ function DashboardPage() {
               <Text.Title size="xLarge" className="font-bold text-gray-900">Tổng quan</Text.Title>
               <Text className="text-sm text-gray-500">Xin chào! Dưới đây là tình hình học viên hôm nay.</Text>
             </div>
+            {/* Nút đổi chế độ Sáng / Tối — nằm bên trái vùng capsule của Zalo nên không bị che */}
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors flex items-center justify-center text-center ${
+                isDarkMode
+                  ? "bg-slate-700 border-slate-600 text-slate-100 active:bg-slate-600"
+                  : "bg-slate-100 border-slate-300 text-slate-700 active:bg-slate-200"
+              }`}
+            >
+              {isDarkMode ? "Chế độ: Tối" : "Chế độ: Sáng"}
+            </button>
           </div>
         </div>
 
@@ -370,6 +391,7 @@ function DashboardPage() {
           </div>
 
           {/* (2) Danh mục quản lý — đặt ngay dưới thẻ thống kê để PT vào nhanh tính năng chính */}
+<<<<<<< HEAD
           <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
             <Text.Title size="medium" className="font-bold text-gray-900">Danh mục quản lý</Text.Title>
             <div className="grid grid-cols-2 gap-3">
@@ -377,43 +399,75 @@ function DashboardPage() {
                   (100 -> 200) và chữ vẫn đậm 800/900 nên luôn đọc được, không bị thành nền xanh đậm */}
               <button
                 type="button"
+=======
+          <div className="bg-white rounded-xl shadow-sm p-4 space-y-3 dark:bg-gray-800 dark:border dark:border-gray-700">
+            <Text.Title size="medium" className="font-bold text-gray-900 dark:text-white">Danh mục quản lý</Text.Title>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Mỗi nút giữ nền pastel; trạng thái nhấn chỉ đậm hơn 1 cấp (100 -> 200) và chữ vẫn đậm 800/900 để luôn đọc được */}
+              <Button
+>>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
                 className="bg-blue-100 hover:bg-blue-100 focus:bg-blue-100 active:bg-blue-200 text-blue-800 focus:text-blue-800 active:text-blue-900 border border-blue-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
                 style={{ WebkitTapHighlightColor: 'transparent' }}
                 onClick={() => goTo('/clients')}
               >
                 Quản lý học viên
+<<<<<<< HEAD
               </button>
               <button
                 type="button"
+=======
+              </Button>
+              <Button
+>>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
                 className="bg-indigo-100 hover:bg-indigo-100 focus:bg-indigo-100 active:bg-indigo-200 text-indigo-800 focus:text-indigo-800 active:text-indigo-900 border border-indigo-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
                 style={{ WebkitTapHighlightColor: 'transparent' }}
                 onClick={() => goTo('/workouts')}
               >
                 Lịch & Buổi tập
+<<<<<<< HEAD
               </button>
               <button
                 type="button"
+=======
+              </Button>
+              <Button
+>>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
                 className="bg-emerald-100 hover:bg-emerald-100 focus:bg-emerald-100 active:bg-emerald-200 text-emerald-800 focus:text-emerald-800 active:text-emerald-900 border border-emerald-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
                 style={{ WebkitTapHighlightColor: 'transparent' }}
                 onClick={() => goTo('/progress')}
               >
                 Chỉ số InBody
+<<<<<<< HEAD
               </button>
               <button
                 type="button"
+=======
+              </Button>
+              <Button
+>>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
                 className="bg-rose-100 hover:bg-rose-100 focus:bg-rose-100 active:bg-rose-200 text-rose-800 focus:text-rose-800 active:text-rose-900 border border-rose-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
                 style={{ WebkitTapHighlightColor: 'transparent' }}
                 onClick={handleScrollToInactive}
               >
                 Học viên cần theo dõi
+<<<<<<< HEAD
               </button>
+=======
+              </Button>
+>>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
             </div>
           </div>
 
           {/* (3) Học viên cần theo dõi (7-10 ngày) */}
+<<<<<<< HEAD
           <div ref={inactiveSectionRef} className="bg-white rounded-xl shadow-sm">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <Text.Title size="large" className="font-bold text-gray-900">
+=======
+          <div ref={inactiveSectionRef} className="bg-white rounded-xl shadow-sm dark:bg-gray-800 dark:border dark:border-gray-700">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <Text.Title size="large" className="font-bold text-gray-900 dark:text-white">
+>>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
                 Học viên cần theo dõi (7-10 ngày)
               </Text.Title>
               <Button className="inline-flex items-center justify-center text-center" variant="text" size="small" onClick={() => goTo('/clients')}>Xem tất cả</Button>
@@ -423,7 +477,11 @@ function DashboardPage() {
                 <InactiveClientCard key={client.id} client={client} onClick={handleOpenDetail} />
               ))}
               {inactiveClients.length === 0 && (
+<<<<<<< HEAD
                 <div className="text-center py-8 text-gray-500">
+=======
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+>>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
                   <Text>Không có học viên cần hỏi thăm. Tuyệt vời!</Text>
                 </div>
               )}
@@ -431,9 +489,15 @@ function DashboardPage() {
           </div>
 
           {/* (4) Buổi tập sắp tới — xem nhanh ở cuối trang */}
+<<<<<<< HEAD
           <div className="bg-white rounded-xl shadow-sm">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <Text.Title size="large" className="font-bold text-gray-900">Buổi tập sắp tới</Text.Title>
+=======
+          <div className="bg-white rounded-xl shadow-sm dark:bg-gray-800 dark:border dark:border-gray-700">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <Text.Title size="large" className="font-bold text-gray-900 dark:text-white">Buổi tập sắp tới</Text.Title>
+>>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
               <Button className="inline-flex items-center justify-center text-center" variant="text" size="small" onClick={() => goTo('/workouts')}>Xem lịch</Button>
             </div>
             <div className="p-4 space-y-3">
@@ -441,7 +505,11 @@ function DashboardPage() {
                 <UpcomingSessionRow key={session.id} session={session} onClick={() => goTo('/workouts')} />
               ))}
               {upcomingSessions.length === 0 && (
+<<<<<<< HEAD
                 <div className="text-center py-8 text-gray-500">
+=======
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+>>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
                   <Text>Chưa có buổi tập nào sắp tới.</Text>
                 </div>
               )}
