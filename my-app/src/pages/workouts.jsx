@@ -242,11 +242,7 @@ export function WorkoutAddView() {
         {/* Date & Time */}
         <div className="grid grid-cols-2 gap-3">
           <div className="min-w-0">
-<<<<<<< HEAD
             <Text className="text-sm text-gray-500 mb-1 block">Ngày tập <span className="text-red-500">*</span></Text>
-=======
-            <Text className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Ngày tập <span className="text-red-500">*</span></Text>
->>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
             {/* Khung bọc chặt: giữ input luôn nằm trong cột, không tràn ra ngoài trên iOS */}
             <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-white">
               <input
@@ -254,11 +250,7 @@ export function WorkoutAddView() {
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 className="block w-full max-w-full min-w-0 box-border appearance-none bg-transparent px-3 py-2.5 pr-10 text-sm text-slate-800 focus:outline-none"
-<<<<<<< HEAD
                 style={{ WebkitAppearance: 'none', minWidth: 0, width: '100%', colorScheme: 'light' }}
-=======
-                style={{ WebkitAppearance: 'none', minWidth: 0, width: '100%' }}
->>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
               />
               {/* Icon lịch vẽ bằng SVG để iOS luôn hiển thị icon sắc nét */}
               <svg

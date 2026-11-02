@@ -520,11 +520,7 @@ export function ProgressAddView() {
                 value={form.dateIso}
                 onChange={(e) => setField("dateIso", e.target.value)}
                 className="block w-full max-w-full min-w-0 box-border appearance-none bg-transparent px-3 py-2.5 pr-10 text-sm text-slate-800 focus:outline-none"
-<<<<<<< HEAD
                 style={{ WebkitAppearance: 'none', minWidth: 0, width: '100%', colorScheme: 'light' }}
-=======
-                style={{ WebkitAppearance: 'none', minWidth: 0, width: '100%' }}
->>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
               />
               {/* Icon lịch vẽ bằng SVG để iOS luôn hiển thị icon sắc nét */}
               <svg

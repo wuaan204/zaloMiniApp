@@ -1,9 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-<<<<<<< HEAD
 // API của Zalo: đổi màu chữ & icon trên thanh action bar / status bar
 import { configAppView } from "zmp-sdk/apis";
-=======
->>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
 
 // ============================================
 // (1) DỮ LIỆU MẪU (mock data) dùng chung cho toàn app
@@ -436,7 +433,6 @@ export function AppProvider({ children }) {
   const [progressClients, setProgressClients] = useState(initialProgressClients);
   const [selectedProgressClientId, setSelectedProgressClientId] = useState(initialProgressClients[0].id);
 
-<<<<<<< HEAD
   // ----- STATUS BAR: LUÔN CHỮ & ICON MÀU ĐEN -----
   // Chạy 1 lần khi app khởi động. Nhờ vậy dù điện thoại bật Dark Mode (icon trắng)
   // thì Zalo vẫn vẽ lại giờ, sóng Wi-Fi, pin màu đen trên header trắng của app.
@@ -448,31 +444,6 @@ export function AppProvider({ children }) {
       // Trình duyệt không có API của Zalo -> bỏ qua, app vẫn chạy bình thường
     }
   }, []);
-=======
-  // ----- CHẾ ĐỘ SÁNG / TỐI -----
-  // Đọc lựa chọn đã lưu trong localStorage khi mở app (mặc định là chế độ Sáng)
-  const [isDarkMode, setIsDarkMode] = useState(
-    () => localStorage.getItem("pt_dark_mode") === "true"
-  );
-
-  // Mỗi khi isDarkMode thay đổi: bật/tắt class "dark-mode" trên <html> và <body>,
-  // đồng thời lưu lựa chọn vào localStorage để lần sau mở app vẫn giữ nguyên.
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark-mode");
-      document.body.classList.add("dark-mode");
-    } else {
-      document.documentElement.classList.remove("dark-mode");
-      document.body.classList.remove("dark-mode");
-    }
-    localStorage.setItem("pt_dark_mode", String(isDarkMode));
-  }, [isDarkMode]);
-
-  // Bật / tắt chế độ Tối (nút bấm nằm ở header trang Tổng quan)
-  const toggleDarkMode = () => {
-    setIsDarkMode((prev) => !prev);
-  };
->>>>>>> 79d6a0ee580942a3e99c59b22c0a1729b081dfb5
 
   // ----- (3) HANDLERS: học viên -----
 
@@ -570,7 +541,6 @@ export function AppProvider({ children }) {
     selectedInactiveClient, setSelectedInactiveClient,
     sessions, selectedSession, setSelectedSession, addSession, updateSession, deleteSession,
     progressClients, selectedProgressClientId, setSelectedProgressClientId, addInbodyRecord, deleteInbodyRecord,
-    isDarkMode, toggleDarkMode,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
