@@ -1,104 +1,173 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-// API của Zalo: đổi màu chữ & icon trên thanh action bar / status bar
-import { configAppView } from "zmp-sdk/apis";
+// API của Zalo: đổi màu chữ & icon trên thanh action bar / status bar,
+// và openWebview để mở link Zalo trong môi trường Mini App
+import { configAppView, openWebview } from "zmp-sdk/apis";
 
 // ============================================
 // (1) DỮ LIỆU MẪU (mock data) dùng chung cho toàn app
 // ============================================
 
 // ----- Học viên -----
-const initialClients = [
-  {
+// Mỗi học viên có đủ trường cơ bản + 3 trường Zalo CRM:
+// hasUnreadZalo (khách đang chờ PT trả lời), lastZaloMessage, lastZaloTime
+
+// Hàm hỗ trợ: trả về ngày "YYYY-MM-DD" cách ngày dữ liệu mẫu `days` ngày
+function getDateBefore(days) {
+  const date = new Date("2026-10-15T12:00:00");
+  date.setDate(date.getDate() - days);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+// Hàm hỗ trợ: lấy ngẫu nhiên 1 phần tử trong mảng
+function randomItem(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+// Hàm hỗ trợ: tạo 1 học viên đầy đủ trường (dùng cho dữ liệu mẫu, thêm mới, tạo 500 KH)
+function createClient(data) {
+  const inactiveDays = typeof data.inactiveDays === "number" ? data.inactiveDays : 0;
+  const packageTotal = data.packageTotal || 24;
+  return {
+    id: data.id,
+    name: data.name,
+    phone: data.phone,
+    goal: data.goal || "Giảm mỡ",
+    packageTotal: packageTotal,
+    packageUsed: data.packageUsed || 0,
+    status: data.status || "Đang tập",
+    // Ngày tập gần nhất = hôm nay trừ đi số ngày chưa tương tác
+    lastWorkoutDate: data.lastWorkoutDate || getDateBefore(inactiveDays),
+    inactiveDays: inactiveDays,
+    note: data.note || "",
+    // 3 trường Zalo CRM
+    hasUnreadZalo: Boolean(data.hasUnreadZalo),
+    lastZaloMessage: data.lastZaloMessage || "",
+    lastZaloTime: data.lastZaloTime || "Chưa liên hệ",
+    // Mốc thời gian nhận tin chưa trả lời (dùng để đưa tin mới nhất lên đầu)
+    unreadTimestamp: data.unreadTimestamp || 0,
+    // Ảnh đại diện + nhật ký tương tác
+    avatar: data.avatar || `https://i.pravatar.cc/150?u=${data.id}`,
+    interactionLogs: data.interactionLogs || [],
+  };
+}
+
+// 5 học viên gốc — học viên số 2 đang có tin nhắn Zalo chưa trả lời
+const defaultClients = [
+  createClient({
     id: 1,
     name: "Nguyễn Văn An",
     phone: "0901 234 567",
     goal: "Giảm mỡ",
-    packageName: "Gói 24 buổi",
-    completedSessions: 8,
-    totalSessions: 24,
+    packageTotal: 24,
+    packageUsed: 8,
     status: "Đang tập",
-    lastInteractionDate: "2026-10-12",
-    notes: "Khách hàng muốn giảm cân trước Tết. Cần chú ý dinh dưỡng.",
+    inactiveDays: 2,
+    note: "Muốn giảm cân trước Tết. Cần chú ý dinh dưỡng.",
+    lastZaloMessage: "PT ơi em đã gửi ảnh bữa trưa, PT xem giúp em nhé",
+    lastZaloTime: "2 ngày trước",
     interactionLogs: [
       { date: "2026-10-12", content: "Tư vấn menu ăn kiêng giảm carb", nextAction: "Gửi file menu qua Zalo" },
       { date: "2026-10-05", content: "Buổi tập số 8 - HIIT 20 phút", nextAction: "Đặt lịch buổi 9 thứ 4 tới" },
-      { date: "2026-09-28", content: "Đo InBody - giảm 1.5kg mỡ", nextAction: "Điều chỉnh bài tập tăng cường cardio" },
     ],
-    avatar: "https://i.pravatar.cc/150?u=1",
-  },
-  {
+  }),
+  createClient({
     id: 2,
     name: "Trần Thị Bình",
     phone: "0912 345 678",
     goal: "Tăng cơ",
-    packageName: "Gói 36 buổi",
-    completedSessions: 15,
-    totalSessions: 36,
+    packageTotal: 36,
+    packageUsed: 15,
     status: "Đang tập",
-    lastInteractionDate: "2026-10-13",
-    notes: "Đang tập phân chia upper/lower. Cần tăng trọng lượng từ từ.",
+    inactiveDays: 0,
+    note: "Đang tập upper/lower. Cần tăng trọng lượng từ từ.",
+    hasUnreadZalo: true,
+    lastZaloMessage: "Em xin đổi lịch tập buổi tối thứ 5 nhé",
+    lastZaloTime: "Vừa xong",
     interactionLogs: [
       { date: "2026-10-13", content: "Buổi tập số 15 - Leg day, PR squat 80kg", nextAction: "Tăng 5kg cho buổi tới" },
-      { date: "2026-10-06", content: "Check form deadlift - cần sửa hunch back", nextAction: "Tập core thêm 3 bài" },
-      { date: "2026-09-30", content: "Đo InBody - tăng 2kg cơ", nextAction: "Duy trì protein 2g/kg" },
+      { date: "2026-10-06", content: "Check form deadlift - cần sửa lưng gù", nextAction: "Tập core thêm 3 bài" },
     ],
-    avatar: "https://i.pravatar.cc/150?u=2",
-  },
-  {
+  }),
+  createClient({
     id: 3,
     name: "Lê Văn Cường",
     phone: "0923 456 789",
-    goal: "Duy trì form",
-    packageName: "Gói 24 buổi",
-    completedSessions: 22,
-    totalSessions: 24,
-    status: "Sắp hết gói",
-    lastInteractionDate: "2026-10-06",
-    notes: "Sắp hết gói 24 buổi. Cần tư vấn gia hạn hoặc nâng cấp.",
+    goal: "Duy trì vóc dáng",
+    packageTotal: 24,
+    packageUsed: 22,
+    status: "Đang tập",
+    inactiveDays: 7,
+    note: "Sắp hết gói 24 buổi. Cần tư vấn gia hạn hoặc nâng cấp.",
+    lastZaloMessage: "Gói của em còn 2 buổi đúng không PT?",
+    lastZaloTime: "7 ngày trước",
     interactionLogs: [
       { date: "2026-10-06", content: "Buổi tập số 22 - Full body maintenance", nextAction: "Nhắc gia hạn gói tập" },
       { date: "2026-09-29", content: "Buổi tập số 21 - Cardio + Core", nextAction: "Đặt lịch buổi cuối cùng" },
-      { date: "2026-09-22", content: "Đo InBody - ổn định weight 72kg", nextAction: "Giữ nguyên chế độ" },
     ],
-    avatar: "https://i.pravatar.cc/150?u=3",
-  },
-  {
+  }),
+  createClient({
     id: 4,
     name: "Phạm Thị Dung",
     phone: "0934 567 890",
-    goal: "Giảm mỡ",
-    packageName: "Gói 12 buổi",
-    completedSessions: 3,
-    totalSessions: 12,
-    status: "Tạm dừng",
-    lastInteractionDate: "2026-10-04",
-    notes: "Tạm dừng do bận công việc. Hẹn quay lại sau 2 tuần.",
+    goal: "Phục hồi chấn thương",
+    packageTotal: 12,
+    packageUsed: 3,
+    status: "Tạm nghỉ",
+    inactiveDays: 10,
+    note: "Tạm nghỉ do đau khớp gối và bận công việc. Hẹn quay lại sau 2 tuần.",
+    lastZaloMessage: "Em bận deadline dự án, hẹn PT sang tháng sau ạ",
+    lastZaloTime: "10 ngày trước",
     interactionLogs: [
-      { date: "2026-10-04", content: "Thông báo tạm dừng do deadline dự án", nextAction: "Liên hệ lại 20/10" },
-      { date: "2026-09-27", content: "Buổi tập số 3 - HIIT beginner", nextAction: "Hướng dẫn bài tập tại nhà" },
-      { date: "2026-09-20", content: "Khám sức khỏe - BT đều, cho phép tập nhẹ", nextAction: "Điều chỉnh cường độ thấp" },
+      { date: "2026-10-04", content: "Thông báo tạm nghỉ do deadline dự án", nextAction: "Liên hệ lại 20/10" },
+      { date: "2026-09-27", content: "Buổi tập số 3 - HIIT cường độ nhẹ", nextAction: "Hướng dẫn bài tập tại nhà" },
     ],
-    avatar: "https://i.pravatar.cc/150?u=4",
-  },
-  {
+  }),
+  createClient({
     id: 5,
     name: "Hoàng Văn Em",
     phone: "0945 678 901",
-    goal: "Tăng sức bền",
-    packageName: "Gói 24 buổi",
-    completedSessions: 12,
-    totalSessions: 24,
-    status: "Đang tập",
-    lastInteractionDate: "2026-10-07",
-    notes: "Chuẩn bị chạy marathon 10km tháng 11. Tập cardio + strength.",
+    goal: "Tăng cơ",
+    packageTotal: 24,
+    packageUsed: 24,
+    status: "Hết hạn",
+    inactiveDays: 8,
+    note: "Đã hết gói 24 buổi. Cần gọi tư vấn gói mới khi khách về.",
+    lastZaloMessage: "Cảm ơn PT, em vừa đi công tác về ạ",
+    lastZaloTime: "8 ngày trước",
     interactionLogs: [
-      { date: "2026-10-07", content: "Long run 8km - pace 6:30/km", nextAction: "Tăng lên 10km cuối tuần" },
-      { date: "2026-09-30", content: "Buổi tập số 11 - Interval training", nextAction: "Theo dõi HR zone" },
-      { date: "2026-09-23", content: "Đo InBody - body fat 18%", nextAction: "Duy trì carb loading trước chạy dài" },
+      { date: "2026-10-07", content: "Hoàn thành buổi cuối của gói 24 buổi", nextAction: "Tư vấn gia hạn gói 36 buổi" },
+      { date: "2026-09-30", content: "Buổi tập số 23 - Thân trên", nextAction: "Theo dõi phục hồi cơ" },
     ],
-    avatar: "https://i.pravatar.cc/150?u=5",
-  },
+  }),
 ];
+
+// ----- LƯU / ĐỌC DANH SÁCH HỌC VIÊN -----
+// Giúp trạng thái (đã trả lời Zalo, inactiveDays...) không mất khi quay lại từ Zalo
+const CLIENTS_STORAGE_KEY = "pt_clients";
+
+// Đọc danh sách học viên đã lưu; nếu chưa có hoặc dữ liệu lỗi thì dùng 5 học viên gốc
+function loadClientsFromStorage() {
+  try {
+    const saved = sessionStorage.getItem(CLIENTS_STORAGE_KEY);
+    if (!saved) return defaultClients;
+    const parsedClients = JSON.parse(saved);
+    return Array.isArray(parsedClients) && parsedClients.length > 0 ? parsedClients : defaultClients;
+  } catch (error) {
+    return defaultClients;
+  }
+}
+
+// Lưu danh sách học viên vào sessionStorage sau mỗi lần state thay đổi
+function saveClientsToStorage(clientList) {
+  try {
+    sessionStorage.setItem(CLIENTS_STORAGE_KEY, JSON.stringify(clientList));
+  } catch (error) {
+    // Trình duyệt chặn storage -> bỏ qua, app vẫn chạy bình thường
+  }
+}
 
 // ----- Buổi tập (kèm các mốc ngày dùng để chia nhóm Hôm nay / Ngày mai / Ngày trước) -----
 export const today = "2026-10-15";
@@ -412,15 +481,42 @@ const initialProgressClients = [
 ];
 
 // ============================================
+// (1b) DỮ LIỆU MẪU CHO TÍNH NĂNG 500+ HỌC VIÊN
+// ============================================
+// Họ, tên đệm, tên thường gặp của người Việt để ghép tên ngẫu nhiên
+const familyNames = [
+  "Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Vũ", "Đặng",
+  "Bùi", "Đỗ", "Ngô", "Dương", "Lý", "Phan", "Võ",
+];
+const middleNames = [
+  "Văn", "Thị", "Minh", "Hữu", "Thanh", "Ngọc", "Gia", "Khánh", "Quốc", "Thu",
+];
+const givenNames = [
+  "An", "Bình", "Cường", "Dung", "Em", "Phượng", "Giang", "Hạnh", "Khải", "Lan",
+  "Minh", "Nga", "Phúc", "Quân", "Sơn", "Trang", "Tú", "Vân", "Yến", "Hùng",
+];
+// Tin nhắn Zalo mẫu để giả lập khách nhắn tới PT
+const bulkZaloMessages = [
+  "PT ơi tuần này em bận, dời lịch tập được không ạ?",
+  "Em gửi ảnh thực đơn bữa trưa, PT xem giúp em nhé",
+  "Gói tập của em còn mấy buổi ạ?",
+  "Sáng nay em hơi mệt, xin nghỉ buổi tập nhé PT",
+  "PT tư vấn giúp em gói tập mới với ạ",
+];
+
+// ============================================
 // (2) CONTEXT: state dùng chung giữa các trang (route)
 // ============================================
 const AppContext = createContext(null);
 
 // Component bọc toàn app: giữ state và các hàm xử lý để mọi trang cùng dùng
 export function AppProvider({ children }) {
-  // Danh sách học viên và học viên đang được chọn xem chi tiết
-  const [clients, setClients] = useState(initialClients);
+  // Danh sách học viên (đọc từ sessionStorage nếu có) và học viên đang được chọn xem chi tiết
+  const [clients, setClients] = useState(loadClientsFromStorage);
   const [selectedClient, setSelectedClient] = useState(null);
+
+  // Bộ lọc ưu tiên ở trang Học viên (đặt trong Context để Dashboard mở thẳng danh sách chờ Zalo)
+  const [activeClientFilter, setActiveClientFilter] = useState("all");
 
   // Học viên "cần theo dõi" ở Dashboard đang được chọn xem chi tiết
   const [selectedInactiveClient, setSelectedInactiveClient] = useState(null);
@@ -445,19 +541,35 @@ export function AppProvider({ children }) {
     }
   }, []);
 
+  // ----- LƯU TRẠNG THÁI HỌC VIÊN -----
+  // Mỗi khi danh sách thay đổi (gửi Zalo, nhận webhook...) thì lưu lại,
+  // nhờ vậy quay về từ app Zalo hoặc tải lại trang vẫn giữ đúng trạng thái
+  useEffect(() => {
+    saveClientsToStorage(clients);
+  }, [clients]);
+
   // ----- (3) HANDLERS: học viên -----
 
-  // Thêm học viên mới vào đầu danh sách
+  // Cập nhật học viên đang mở ở màn hình chi tiết để giao diện đổi ngay
+  const syncSelectedClient = (updatedClient) => {
+    if (selectedClient && selectedClient.id === updatedClient.id) {
+      setSelectedClient(updatedClient);
+    }
+    if (selectedInactiveClient && selectedInactiveClient.id === updatedClient.id) {
+      setSelectedInactiveClient(updatedClient);
+    }
+  };
+
+  // Thêm học viên mới vào đầu danh sách (createClient bổ sung đủ trường còn thiếu)
   const addClient = (newClient) => {
-    const clientToAdd = {
+    const clientToAdd = createClient({
       ...newClient,
       id: Date.now(),
-      completedSessions: 0,
+      packageUsed: 0,
       status: "Đang tập",
-      lastInteractionDate: "2026-10-14",
+      inactiveDays: 0,
       interactionLogs: [],
-      avatar: `https://i.pravatar.cc/150?u=${Date.now()}`,
-    };
+    });
     setClients([clientToAdd, ...clients]);
   };
 
@@ -466,6 +578,9 @@ export function AppProvider({ children }) {
     setClients(clients.map((c) => (c.id === id ? { ...c, ...updates } : c)));
     if (selectedClient && selectedClient.id === id) {
       setSelectedClient({ ...selectedClient, ...updates });
+    }
+    if (selectedInactiveClient && selectedInactiveClient.id === id) {
+      setSelectedInactiveClient({ ...selectedInactiveClient, ...updates });
     }
   };
 
@@ -480,8 +595,119 @@ export function AppProvider({ children }) {
     if (!client) return;
     updateClient(clientId, {
       interactionLogs: [note, ...client.interactionLogs],
-      lastInteractionDate: note.date,
+      // Vừa ghi chú tức là vừa tương tác -> học viên không còn bị tính là vắng mặt
+      inactiveDays: 0,
     });
+  };
+
+  // ----- HANDLERS: ZALO CRM & DỮ LIỆU LỚN -----
+
+  // Tạo `count` học viên mẫu (mặc định 500) để demo khả năng xử lý dữ liệu lớn
+  const generateBulkClients = (count = 500) => {
+    const generatedClients = [];
+    for (let i = 0; i < count; i++) {
+      const packageTotal = randomItem([12, 24, 36, 48]);
+      const packageUsed = Math.floor(Math.random() * (packageTotal + 1));
+      const inactiveDays = Math.floor(Math.random() * 16); // 0 -> 15 ngày
+      const hasUnreadZalo = Math.random() < 0.1; // khoảng 10% khách đang chờ trả lời
+      let status = "Đang tập";
+      if (packageTotal - packageUsed <= 0) {
+        status = "Hết hạn";
+      } else if (Math.random() < 0.15) {
+        status = "Tạm nghỉ";
+      }
+      generatedClients.push(
+        createClient({
+          id: Date.now() + i,
+          name: `${randomItem(familyNames)} ${randomItem(middleNames)} ${randomItem(givenNames)}`,
+          phone: "09" + String(10000000 + i * 137), // SĐT dạng 09xxxxxxxx
+          goal: randomItem(["Giảm mỡ", "Tăng cơ", "Duy trì vóc dáng", "Phục hồi chấn thương"]),
+          packageTotal: packageTotal,
+          packageUsed: packageUsed,
+          status: status,
+          inactiveDays: inactiveDays,
+          note: "Học viên mẫu được tạo tự động để demo dữ liệu lớn.",
+          hasUnreadZalo: hasUnreadZalo,
+          lastZaloMessage: hasUnreadZalo
+            ? randomItem(bulkZaloMessages)
+            : "PT đã gửi lời nhắc lịch tập.",
+          // "Vừa xong" chỉ dành cho webhook thật, dữ liệu mẫu dùng mốc thời gian cũ
+          lastZaloTime: hasUnreadZalo
+            ? randomItem(["10 phút trước", "30 phút trước", "1 giờ trước"])
+            : inactiveDays === 0
+              ? "Hôm nay"
+              : `${inactiveDays} ngày trước`,
+        })
+      );
+    }
+    setClients(generatedClients);
+    setSelectedClient(null);
+    setSelectedInactiveClient(null);
+    setActiveClientFilter("all");
+  };
+
+  // Khôi phục lại 5 học viên gốc ban đầu
+  const resetDefaultClients = () => {
+    setClients(defaultClients);
+    setSelectedClient(null);
+    setSelectedInactiveClient(null);
+    setActiveClientFilter("all");
+  };
+
+  // Giả lập webhook "user_send_text" từ Zalo Official Account khi khách nhắn tin
+  const simulateIncomingZaloWebhook = (clientId, messageText) => {
+    // So sánh ID bằng String vì <select> của HTML luôn trả về chuỗi ("1" thay vì 1)
+    const target = clients.find((c) => String(c.id) === String(clientId));
+    if (!target) return;
+    const updatedClient = {
+      ...target,
+      hasUnreadZalo: true,
+      lastZaloMessage: String(messageText || ""),
+      lastZaloTime: "Vừa xong",
+      // Ghi lại thời điểm nhận tin để sort: tin mới nhất luôn đứng đầu
+      unreadTimestamp: Date.now(),
+      inactiveDays: 0,
+    };
+    // Đưa học viên vừa nhắn lên vị trí đầu tiên (index 0) của danh sách
+    const otherClients = clients.filter((c) => String(c.id) !== String(target.id));
+    setClients([updatedClient, ...otherClients]);
+    syncSelectedClient(updatedClient);
+  };
+
+  // Đánh dấu đã liên hệ Zalo + mở link Zalo (nút bấm ở UI là thẻ <a> thật)
+  const contactClientViaZalo = (clientId, phone) => {
+    // So sánh ID bằng String để tránh lỗi lệch kiểu dữ liệu (số vs chuỗi)
+    const target = clients.find((c) => String(c.id) === String(clientId));
+    // Ưu tiên số điện thoại truyền vào, nếu không có thì lấy số của học viên
+    const cleanPhone = String(phone || (target ? target.phone : "")).replace(/\D/g, "");
+
+    // 1) Cập nhật state + lưu ngay vào sessionStorage để khi quay lại từ Zalo vẫn giữ trạng thái
+    if (target) {
+      const updatedClient = {
+        ...target,
+        hasUnreadZalo: false,
+        inactiveDays: 0,
+        lastZaloTime: "Vừa liên hệ",
+        unreadTimestamp: 0,
+      };
+      const updatedClients = clients.map((c) =>
+        String(c.id) === String(target.id) ? updatedClient : c
+      );
+      setClients(updatedClients);
+      saveClientsToStorage(updatedClients);
+      syncSelectedClient(updatedClient);
+    }
+
+    // Không có số điện thoại hợp lệ thì chỉ cập nhật trạng thái, không mở Zalo
+    if (!cleanPhone) return;
+
+    // 2) Fallback cho Zalo Mini App: mở webview tới zalo.me.
+    //    Bọc try/catch + .catch để chạy ngoài Zalo (trình duyệt thường) không bị lỗi.
+    try {
+      openWebview({ url: "https://zalo.me/" + cleanPhone }).catch(() => {});
+    } catch (error) {
+      // Chạy ngoài Zalo Mini App -> bỏ qua, thẻ <a> phía UI vẫn tự mở link
+    }
   };
 
   // ----- HANDLERS: buổi tập -----
@@ -538,6 +764,8 @@ export function AppProvider({ children }) {
   // Gom toàn bộ state + handler vào một object để chia sẻ qua Context
   const value = {
     clients, selectedClient, setSelectedClient, addClient, updateClient, deleteClient, addNote,
+    activeClientFilter, setActiveClientFilter,
+    generateBulkClients, resetDefaultClients, simulateIncomingZaloWebhook, contactClientViaZalo,
     selectedInactiveClient, setSelectedInactiveClient,
     sessions, selectedSession, setSelectedSession, addSession, updateSession, deleteSession,
     progressClients, selectedProgressClientId, setSelectedProgressClientId, addInbodyRecord, deleteInbodyRecord,

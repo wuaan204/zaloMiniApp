@@ -27,65 +27,12 @@ const SvgChart = () => (
 );
 
 // Dữ liệu mẫu cho 4 thẻ thống kê
+// (riêng thẻ "Tổng học viên" sẽ lấy số thật từ Context để đúng khi demo 500 học viên)
 const stats = [
-  { label: "Tổng học viên",     value: "42",  color: "text-blue-600",   bg: "bg-blue-50",   SvgIcon: SvgUsers },
+  { label: "Tổng học viên",     value: "0",   color: "text-blue-600",   bg: "bg-blue-50",   SvgIcon: SvgUsers },
   { label: "Đi tập tuần này",   value: "28",  color: "text-green-600",  bg: "bg-green-50",  SvgIcon: SvgCheckCircle },
   { label: "Buổi dạy tuần này", value: "67",  color: "text-purple-600", bg: "bg-purple-50", SvgIcon: SvgCalendar },
   { label: "Bản ghi InBody",    value: "156", color: "text-orange-600", bg: "bg-orange-50", SvgIcon: SvgChart },
-];
-
-// Dữ liệu mẫu cho danh sách học viên cần theo dõi (7-10 ngày)
-const inactiveClients = [
-  {
-    id: 1, name: "Nguyễn Văn An", lastActive: "8 ngày chưa tương tác",
-    avatar: "https://i.pravatar.cc/150?u=1", phone: "0901 234 567",
-    lastWorkout: "2026-10-05", daysInactive: 8,
-    goal: "Giảm mỡ", packageName: "Gói 24 buổi",
-    completedSessions: 8, totalSessions: 24,
-    lastWorkoutFocus: "Thân trên - Ngực & Tay sau",
-    note: "Đang áp dụng thực đơn giảm carb. Cần hỏi thăm cân nặng và mức độ kiên trì tuần này.",
-    suggestedAction: "Nhắn Zalo hỏi thăm cân nặng, nhắc đặt lịch buổi 9 vào thứ 4 tuần này.",
-  },
-  {
-    id: 2, name: "Trần Thị Bình", lastActive: "9 ngày chưa tương tác",
-    avatar: "https://i.pravatar.cc/150?u=2", phone: "0912 345 678",
-    lastWorkout: "2026-10-04", daysInactive: 9,
-    goal: "Tăng cơ", packageName: "Gói 36 buổi",
-    completedSessions: 15, totalSessions: 36,
-    lastWorkoutFocus: "Chân & Mông - Squat PR 80kg",
-    note: "Đang tập upper/lower split. Buổi cuối đạt PR squat 80kg, tinh thần tốt.",
-    suggestedAction: "Hỏi thăm tình trạng phục hồi sau buổi leg day, gợi ý đặt lịch buổi 16.",
-  },
-  {
-    id: 3, name: "Lê Văn Cường", lastActive: "7 ngày chưa tương tác",
-    avatar: "https://i.pravatar.cc/150?u=3", phone: "0923 456 789",
-    lastWorkout: "2026-10-06", daysInactive: 7,
-    goal: "Duy trì form", packageName: "Gói 24 buổi",
-    completedSessions: 22, totalSessions: 24,
-    lastWorkoutFocus: "Full Body Maintenance",
-    note: "Sắp hết gói — còn 2 buổi. Cần tư vấn gia hạn hoặc nâng cấp lên gói 36 buổi.",
-    suggestedAction: "Gọi điện tư vấn gia hạn gói tập. Ưu đãi 10% nếu đăng ký trước 20/10.",
-  },
-  {
-    id: 4, name: "Phạm Thị Dung", lastActive: "10 ngày chưa tương tác",
-    avatar: "https://i.pravatar.cc/150?u=4", phone: "0934 567 890",
-    lastWorkout: "2026-10-03", daysInactive: 10,
-    goal: "Giảm mỡ", packageName: "Gói 12 buổi",
-    completedSessions: 3, totalSessions: 12,
-    lastWorkoutFocus: "Full Body HIIT - Cường độ nhẹ",
-    note: "Tạm dừng do bận deadline dự án. Đã hứa quay lại sau 2 tuần (dự kiến 20/10).",
-    suggestedAction: "Nhắn Zalo hỏi thăm tình hình công việc và hẹn ngày quay lại tập.",
-  },
-  {
-    id: 5, name: "Hoàng Văn Em", lastActive: "8 ngày chưa tương tác",
-    avatar: "https://i.pravatar.cc/150?u=5", phone: "0945 678 901",
-    lastWorkout: "2026-10-05", daysInactive: 8,
-    goal: "Tăng sức bền", packageName: "Gói 24 buổi",
-    completedSessions: 12, totalSessions: 24,
-    lastWorkoutFocus: "Long Run 8km - Pace 6:30/km",
-    note: "Đang chuẩn bị cho marathon 10km vào tháng 11. Cần duy trì lịch tập đều đặn.",
-    suggestedAction: "Nhắc lịch tập cuối tuần: long run 10km. Theo dõi HR zone sau chạy.",
-  },
 ];
 
 // Nhãn ngày dễ đọc cho phần "Buổi tập sắp tới" (Hôm nay / Ngày mai / 16/10)
@@ -94,6 +41,11 @@ function sessionDayLabel(dateStr) {
   if (dateStr === tomorrow) return "Ngày mai";
   const [, m, d] = dateStr.split("-");
   return `${d}/${m}`;
+}
+
+// Ngày dạng 12/10/2026
+function formatDate(dateStr) {
+  return new Date(dateStr).toLocaleDateString("vi-VN");
 }
 
 // Thẻ 1 chỉ số thống kê
@@ -125,7 +77,7 @@ function InactiveClientCard({ client, onClick }) {
       </div>
       <div className="flex items-center gap-2">
         <span className="inline-flex items-center justify-center text-center bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 rounded-full text-xs font-semibold">
-          {client.lastActive}
+          {client.inactiveDays} ngày chưa tương tác
         </span>
       </div>
     </div>
@@ -156,7 +108,7 @@ function UpcomingSessionRow({ session, onClick }) {
 // Trang chi tiết học viên cần theo dõi (route "/dashboard-client")
 export function DashboardClientDetail() {
   const navigate = useNavigate();
-  const { selectedInactiveClient: client } = useAppContext();
+  const { selectedInactiveClient: client, contactClientViaZalo } = useAppContext();
 
   // Scroll ref riêng biệt cho màn hình này
   const scrollRef = useRef(null);
@@ -167,11 +119,6 @@ export function DashboardClientDetail() {
       scrollRef.current.scrollTop = 0;
     }
   }, []);
-
-  // Bấm "Đã liên hệ qua Zalo": (thực tế sẽ gọi API đánh dấu đã liên hệ) rồi quay lại trang trước
-  const handleMarkContacted = () => {
-    navigate(-1);
-  };
 
   // Bấm "Xem hồ sơ đầy đủ": chuyển sang trang Học viên
   const handleViewFullProfile = () => {
@@ -187,13 +134,16 @@ export function DashboardClientDetail() {
     );
   }
 
-  const progress = Math.round((client.completedSessions / client.totalSessions) * 100);
+  const progress = Math.round((client.packageUsed / client.packageTotal) * 100);
+  // Số điện thoại chỉ giữ chữ số để tạo link zalo.me chính xác
+  const cleanPhone = String(client.phone || "").replace(/\D/g, "");
+
   return (
     <Page ref={scrollRef} className="bg-slate-100">
       {/* Header — matches spacing of clients.jsx & workouts.jsx */}
       <div
         className="bg-white px-4 pb-3 border-b border-slate-200 sticky top-0 z-30 pr-24"
-        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+        style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
       >
         <div className="flex items-center gap-3">
           <BackButton onClick={() => navigate(-1)} />
@@ -203,7 +153,7 @@ export function DashboardClientDetail() {
             <Text className="text-sm text-gray-500">{client.phone}</Text>
           </div>
           <span className="items-center justify-center text-center bg-red-100 text-red-700 border border-red-200 px-2.5 py-1 rounded-full text-xs font-semibold flex-shrink-0">
-            {client.daysInactive} ngày
+            {client.inactiveDays === 0 ? "Hôm nay" : `${client.inactiveDays} ngày`}
           </span>
         </div>
       </div>
@@ -219,11 +169,11 @@ export function DashboardClientDetail() {
           </div>
           <div className="flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 bg-indigo-50 text-indigo-700 border border-indigo-200">
             <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">GÓI TẬP</span>
-            <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{client.packageName}</span>
+            <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">Gói {client.packageTotal} buổi</span>
           </div>
           <div className="flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 bg-red-50 text-red-700 border border-red-200">
             <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">TÌNH TRẠNG</span>
-            <span className="text-xs font-bold leading-snug break-words w-full">{client.lastActive}</span>
+            <span className="text-xs font-bold leading-snug break-words w-full">{client.status}</span>
           </div>
         </div>
 
@@ -232,7 +182,7 @@ export function DashboardClientDetail() {
           <div className="flex items-center justify-between mb-2">
             <Text className="font-semibold text-gray-900 text-sm">Tiến độ gói tập</Text>
             <Text className="font-bold text-gray-900 text-sm">
-              {client.completedSessions}/{client.totalSessions} buổi
+              {client.packageUsed}/{client.packageTotal} buổi
             </Text>
           </div>
           <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
@@ -246,13 +196,10 @@ export function DashboardClientDetail() {
 
         {/* Last Workout & Notes Card */}
         <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-          {/* Last workout date + focus */}
+          {/* Last workout date */}
           <div className="flex items-start justify-between gap-2">
             <Text className="text-sm font-semibold text-gray-700">Buổi tập cuối</Text>
-            <div className="text-right min-w-0">
-              <Text className="text-sm font-bold text-gray-900">{client.lastWorkout}</Text>
-              <Text className="text-xs text-gray-500 truncate">{client.lastWorkoutFocus}</Text>
-            </div>
+            <Text className="text-sm font-bold text-gray-900">{formatDate(client.lastWorkoutDate)}</Text>
           </div>
 
           {/* Divider */}
@@ -260,26 +207,49 @@ export function DashboardClientDetail() {
 
           {/* Client note */}
           <div>
-            <Text className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Ghi chú học viên</Text>
+            <Text className="text-xs font-semibold text-gray-500 uppercase mb-1.5 block">Ghi chú học viên</Text>
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
-              <Text className="text-xs text-blue-900 leading-relaxed">{client.note}</Text>
+              <Text className="text-xs text-blue-900 leading-relaxed">{client.note || "Chưa có ghi chú."}</Text>
             </div>
           </div>
 
+          {/* Tin nhắn Zalo gần nhất */}
+          {client.lastZaloMessage && (
+            <div>
+              <Text className="text-xs font-semibold text-gray-500 uppercase mb-1.5 block">Tin nhắn Zalo gần nhất</Text>
+              <div className={`rounded-xl p-3 border ${client.hasUnreadZalo ? "bg-blue-50 border-blue-300" : "bg-slate-50 border-slate-200"}`}>
+                <Text className="text-xs text-blue-900 leading-relaxed">{client.lastZaloMessage}</Text>
+                <Text className="text-[11px] text-gray-500 mt-1 block">{client.lastZaloTime}</Text>
+              </div>
+            </div>
+          )}
+
           {/* Suggested action */}
           <div>
-            <Text className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Gợi ý hành động</Text>
+            <Text className="text-xs font-semibold text-gray-500 uppercase mb-1.5 block">Gợi ý hành động</Text>
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
-              <Text className="text-xs text-amber-900 leading-relaxed">{client.suggestedAction}</Text>
+              <Text className="text-xs text-amber-900 leading-relaxed">
+                {client.hasUnreadZalo
+                  ? "Khách đang chờ trả lời Zalo — mở Zalo phản hồi ngay."
+                  : "Nhắn Zalo hỏi thăm tình hình tập luyện và hẹn lịch buổi tiếp theo."}
+              </Text>
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex flex-col gap-2 pt-1">
-          <Button variant="primary" className="inline-flex items-center justify-center text-center w-full" onClick={handleMarkContacted}>
+          {/* Thẻ <a> thật để iOS/Zalo WebView mở link Zalo ngay khi chạm.
+              Không gọi e.preventDefault() để Universal Link hoạt động */}
+          <a
+            href={"https://zalo.me/" + cleanPhone}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2.5 px-4 rounded-xl bg-blue-600 active:bg-blue-700 text-white font-semibold text-sm flex items-center justify-center text-center no-underline"
+            onClick={() => contactClientViaZalo(client.id, client.phone)}
+          >
             Đã liên hệ qua Zalo
-          </Button>
+          </a>
           <Button variant="secondary" className="inline-flex items-center justify-center text-center w-full" onClick={handleViewFullProfile}>
             Xem hồ sơ đầy đủ
           </Button>
@@ -295,8 +265,8 @@ export function DashboardClientDetail() {
 function DashboardPage() {
   const navigate = useNavigate();
 
-  // Lấy hàm lưu học viên đang chọn + danh sách buổi tập từ Context dùng chung
-  const { setSelectedInactiveClient, sessions } = useAppContext();
+  // Lấy danh sách học viên, buổi tập và bộ lọc ưu tiên dùng chung từ Context
+  const { clients, setSelectedInactiveClient, sessions, setActiveClientFilter } = useAppContext();
 
   // ----- (2) STATE & REF -----
   // Scroll ref riêng biệt cho Dashboard, không ảnh hưởng trang khác
@@ -310,16 +280,51 @@ function DashboardPage() {
     return restoreScroll("scroll_dashboard", scrollRef);
   }, []);
 
+  // ----- DỮ LIỆU TÍNH TỪ STATE -----
+
+  // Khách đang chờ PT trả lời Zalo -> hiện banner nhắc việc
+  const unreadClients = clients.filter((c) => c.hasUnreadZalo === true);
+
+  // 5 học viên vắng mặt lâu nhất (từ 7 ngày) để PT liên hệ trước
+  const inactiveClients = clients
+    .filter((c) => c.inactiveDays >= 7)
+    .sort((a, b) => b.inactiveDays - a.inactiveDays)
+    .slice(0, 5);
+
+  // Thẻ "Tổng học viên" luôn đúng số hiện có (kể cả khi demo 500 học viên)
+  const dashboardStats = stats.map((stat, index) =>
+    index === 0 ? { ...stat, value: String(clients.length) } : stat
+  );
+
   // ----- (3) HANDLERS -----
 
   // Chuyển sang trang khác: lưu vị trí cuộn trước để khi bấm Back vẫn nằm đúng chỗ cũ
   const goTo = (path) => {
     saveScroll("scroll_dashboard", scrollRef);
-    // Khi sang trang chính khác, xóa vị trí cuộn cũ để trang đó luôn mở từ đầu trang (scrollTop = 0)
-    if (path === "/clients") resetScroll("scroll_clients");
+    // Vào trang Học viên từ danh mục thì xem toàn bộ danh sách và bắt đầu từ đầu trang
+    if (path === "/clients") {
+      setActiveClientFilter("all");
+      resetScroll("scroll_clients");
+    }
     if (path === "/workouts") resetScroll("scroll_workouts");
     if (path === "/progress") resetScroll("scroll_progress");
     navigate(path);
+  };
+
+  // Mở trang Học viên với phễu lọc "Chờ phản hồi Zalo"
+  const handleOpenUnreadZalo = () => {
+    saveScroll("scroll_dashboard", scrollRef);
+    setActiveClientFilter("unread");
+    resetScroll("scroll_clients");
+    navigate("/clients");
+  };
+
+  // Mở trang Học viên với phễu lọc "Vắng mặt >= 7 ngày"
+  const handleOpenInactiveList = () => {
+    saveScroll("scroll_dashboard", scrollRef);
+    setActiveClientFilter("inactive");
+    resetScroll("scroll_clients");
+    navigate("/clients");
   };
 
   // Bấm vào 1 học viên cần theo dõi: lưu vào Context rồi chuyển sang trang chi tiết
@@ -345,12 +350,12 @@ function DashboardPage() {
   // ----- (4) GIAO DIỆN -----
   return (
     <Page ref={scrollRef} className="bg-gray-50 min-h-screen">
-      {/* Màn hình Tổng quan chính (luôn hiển thị phía sau lớp trượt) */}
+      {/* Màn hình Tổng quan chính */}
       <div>
         {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
         <div
           className="bg-white border-b border-gray-200 px-4 pb-3 sticky top-0 z-30 pr-24"
-          style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+          style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
         >
           <div className="flex items-center gap-2">
             <div className="flex-1 min-w-0">
@@ -364,12 +369,29 @@ function DashboardPage() {
         <div className="p-4 space-y-6 pb-28">
           {/* (1) 4 thẻ thống kê — lưới 2x2 */}
           <div className="grid grid-cols-2 gap-3">
-            {stats.map((stat, index) => (
+            {dashboardStats.map((stat, index) => (
               <StatCard key={index} {...stat} />
             ))}
           </div>
 
-          {/* (2) Danh mục quản lý — đặt ngay dưới thẻ thống kê để PT vào nhanh tính năng chính */}
+          {/* (2) Banner nhắc việc: khách đang chờ PT trả lời Zalo */}
+          {unreadClients.length > 0 && (
+            <button
+              type="button"
+              onClick={handleOpenUnreadZalo}
+              className="w-full bg-blue-50 border border-blue-300 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-1 active:bg-blue-100"
+            >
+              <span className="text-sm font-bold text-blue-800">
+                {unreadClients.length} học viên đang chờ PT trả lời Zalo
+              </span>
+              <span className="text-xs text-blue-700">Học viên có tin nhắn mới luôn nằm đầu danh sách ưu tiên</span>
+              <span className="mt-1 inline-flex items-center justify-center text-center px-4 py-1.5 rounded-full bg-blue-600 text-white text-xs font-bold">
+                Mở danh sách chờ phản hồi
+              </span>
+            </button>
+          )}
+
+          {/* (3) Danh mục quản lý — đặt ngay dưới thẻ thống kê để PT vào nhanh tính năng chính */}
           <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
             <Text.Title size="medium" className="font-bold text-gray-900">Danh mục quản lý</Text.Title>
             <div className="grid grid-cols-2 gap-3">
@@ -378,31 +400,31 @@ function DashboardPage() {
               <button
                 type="button"
                 className="bg-blue-100 hover:bg-blue-100 focus:bg-blue-100 active:bg-blue-200 text-blue-800 focus:text-blue-800 active:text-blue-900 border border-blue-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
-                style={{ WebkitTapHighlightColor: 'transparent' }}
-                onClick={() => goTo('/clients')}
+                style={{ WebkitTapHighlightColor: "transparent" }}
+                onClick={() => goTo("/clients")}
               >
                 Quản lý học viên
               </button>
               <button
                 type="button"
                 className="bg-indigo-100 hover:bg-indigo-100 focus:bg-indigo-100 active:bg-indigo-200 text-indigo-800 focus:text-indigo-800 active:text-indigo-900 border border-indigo-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
-                style={{ WebkitTapHighlightColor: 'transparent' }}
-                onClick={() => goTo('/workouts')}
+                style={{ WebkitTapHighlightColor: "transparent" }}
+                onClick={() => goTo("/workouts")}
               >
                 Lịch & Buổi tập
               </button>
               <button
                 type="button"
                 className="bg-emerald-100 hover:bg-emerald-100 focus:bg-emerald-100 active:bg-emerald-200 text-emerald-800 focus:text-emerald-800 active:text-emerald-900 border border-emerald-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
-                style={{ WebkitTapHighlightColor: 'transparent' }}
-                onClick={() => goTo('/progress')}
+                style={{ WebkitTapHighlightColor: "transparent" }}
+                onClick={() => goTo("/progress")}
               >
                 Chỉ số InBody
               </button>
               <button
                 type="button"
                 className="bg-rose-100 hover:bg-rose-100 focus:bg-rose-100 active:bg-rose-200 text-rose-800 focus:text-rose-800 active:text-rose-900 border border-rose-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
-                style={{ WebkitTapHighlightColor: 'transparent' }}
+                style={{ WebkitTapHighlightColor: "transparent" }}
                 onClick={handleScrollToInactive}
               >
                 Học viên cần theo dõi
@@ -410,13 +432,13 @@ function DashboardPage() {
             </div>
           </div>
 
-          {/* (3) Học viên cần theo dõi (7-10 ngày) */}
+          {/* (4) Học viên cần theo dõi (vắng từ 7 ngày) */}
           <div ref={inactiveSectionRef} className="bg-white rounded-xl shadow-sm">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between gap-2">
               <Text.Title size="large" className="font-bold text-gray-900">
-                Học viên cần theo dõi (7-10 ngày)
+                Học viên cần theo dõi (vắng từ 7 ngày)
               </Text.Title>
-              <Button className="inline-flex items-center justify-center text-center" variant="text" size="small" onClick={() => goTo('/clients')}>Xem tất cả</Button>
+              <Button className="inline-flex items-center justify-center text-center flex-shrink-0" variant="text" size="small" onClick={handleOpenInactiveList}>Xem tất cả</Button>
             </div>
             <div className="p-4 space-y-3">
               {inactiveClients.map((client) => (
@@ -430,15 +452,15 @@ function DashboardPage() {
             </div>
           </div>
 
-          {/* (4) Buổi tập sắp tới — xem nhanh ở cuối trang */}
+          {/* (5) Buổi tập sắp tới — xem nhanh ở cuối trang */}
           <div className="bg-white rounded-xl shadow-sm">
             <div className="p-4 border-b border-gray-200 flex items-center justify-between">
               <Text.Title size="large" className="font-bold text-gray-900">Buổi tập sắp tới</Text.Title>
-              <Button className="inline-flex items-center justify-center text-center" variant="text" size="small" onClick={() => goTo('/workouts')}>Xem lịch</Button>
+              <Button className="inline-flex items-center justify-center text-center" variant="text" size="small" onClick={() => goTo("/workouts")}>Xem lịch</Button>
             </div>
             <div className="p-4 space-y-3">
               {upcomingSessions.map((session) => (
-                <UpcomingSessionRow key={session.id} session={session} onClick={() => goTo('/workouts')} />
+                <UpcomingSessionRow key={session.id} session={session} onClick={() => goTo("/workouts")} />
               ))}
               {upcomingSessions.length === 0 && (
                 <div className="text-center py-8 text-gray-500">
