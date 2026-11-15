@@ -63,22 +63,65 @@ function StatCard({ label, value, SvgIcon, color, bg }) {
   );
 }
 
-// Thẻ hiển thị 1 học viên cần theo dõi
-function InactiveClientCard({ client, onClick }) {
+// Lấy chữ cái đầu của họ tên để làm avatar initials
+function getInitials(name) {
+  const words = String(name || "").trim().split(/\s+/);
+  if (words.length === 0) return "KH";
+  const first = words[0].charAt(0);
+  const last = words.length > 1 ? words[words.length - 1].charAt(0) : "";
+  return (first + last).toUpperCase();
+}
+
+// Dòng học viên cần theo dõi: avatar initials + thông tin + thao tác nhanh
+function InactiveClientCard({ client, onClick, onContactZalo }) {
+  // Số điện thoại sạch để mở chat Zalo trực tiếp
+  const cleanPhone = String(client.phone || "").replace(/\D/g, "");
+
   return (
     <div
-      className="bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-300 p-3.5 flex items-center justify-between cursor-pointer"
+      className="bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-200 p-3 flex flex-col sm:flex-row sm:items-center gap-3 cursor-pointer transition-colors"
       onClick={() => onClick(client)}
     >
-      <Avatar size="large" src={client.avatar} alt={client.name} />
-      <div className="flex-1 min-w-0 space-y-1">
-        <Text.Title size="medium" className="font-semibold text-gray-900 truncate">{client.name}</Text.Title>
-        <Text className="text-sm text-gray-500 truncate">{client.phone}</Text>
+      {/* Avatar initials thay cho ảnh mạng, gọn và dễ quét */}
+      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-xs font-bold flex items-center justify-center shrink-0">
+        {getInitials(client.name)}
       </div>
-      <div className="flex items-center gap-2">
-        <span className="inline-flex items-center justify-center text-center bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 rounded-full text-xs font-semibold">
-          {client.inactiveDays} ngày chưa tương tác
-        </span>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-bold text-slate-800 text-sm truncate">{client.name}</span>
+          <span className="text-[11px] text-slate-500">{client.phone}</span>
+          <span className="inline-flex items-center justify-center text-center bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-full text-[10px] font-semibold">
+            {client.inactiveDays} ngày vắng
+          </span>
+        </div>
+        <p className="text-xs text-slate-500 truncate mt-1">
+          {client.lastZaloMessage || "Chưa có tin nhắn Zalo gần đây"}
+        </p>
+        <p className="text-[10px] text-slate-400 mt-0.5">{client.lastZaloTime}</p>
+      </div>
+
+      {/* Thao tác nhanh: mở Zalo hoặc xem chi tiết */}
+      <div
+        className="shrink-0 flex items-center gap-2"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <a
+          href={"https://zalo.me/" + cleanPhone}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => onContactZalo(client.id, client.phone)}
+          className="px-3 py-1.5 rounded-lg bg-blue-600 active:bg-blue-700 text-white text-xs font-semibold flex items-center justify-center text-center no-underline"
+        >
+          Zalo
+        </a>
+        <button
+          type="button"
+          onClick={() => onClick(client)}
+          className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 text-xs font-semibold flex items-center justify-center text-center"
+        >
+          Chi tiết
+        </button>
       </div>
     </div>
   );
@@ -139,10 +182,11 @@ export function DashboardClientDetail() {
   const cleanPhone = String(client.phone || "").replace(/\D/g, "");
 
   return (
-    <Page ref={scrollRef} className="bg-slate-100">
+    <Page className="h-full w-full overflow-hidden bg-slate-100">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden">
       {/* Header — matches spacing of clients.jsx & workouts.jsx */}
       <div
-        className="bg-white px-4 pb-3 border-b border-slate-200 sticky top-0 z-30 pr-24"
+        className="bg-white px-4 md:px-8 pb-3 border-b border-slate-200 sticky top-0 z-30 pr-24"
         style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
       >
         <div className="flex items-center gap-3">
@@ -159,7 +203,7 @@ export function DashboardClientDetail() {
       </div>
 
       {/* Scrollable body */}
-      <div className="p-4 pb-28 space-y-4">
+      <div className="p-4 md:px-8 pb-28 space-y-4">
 
         {/* 3 Summary Pill Boxes — strict grid-cols-3, never wraps */}
         <div className="grid grid-cols-3 gap-2 w-full">
@@ -255,6 +299,7 @@ export function DashboardClientDetail() {
           </Button>
         </div>
       </div>
+      </div>
     </Page>
   );
 }
@@ -266,7 +311,13 @@ function DashboardPage() {
   const navigate = useNavigate();
 
   // Lấy danh sách học viên, buổi tập và bộ lọc ưu tiên dùng chung từ Context
-  const { clients, setSelectedInactiveClient, sessions, setActiveClientFilter } = useAppContext();
+  const {
+    clients,
+    setSelectedInactiveClient,
+    sessions,
+    setActiveClientFilter,
+    contactClientViaZalo,
+  } = useAppContext();
 
   // ----- (2) STATE & REF -----
   // Scroll ref riêng biệt cho Dashboard, không ảnh hưởng trang khác
@@ -290,6 +341,13 @@ function DashboardPage() {
     .filter((c) => c.inactiveDays >= 7)
     .sort((a, b) => b.inactiveDays - a.inactiveDays)
     .slice(0, 5);
+
+  // Số liệu tổng hợp nhanh cho cột hoạt động bên phải
+  const inactiveCount = clients.filter((c) => c.inactiveDays >= 7).length;
+  const lowSessionCount = clients.filter((c) => {
+    const remaining = c.packageTotal - c.packageUsed;
+    return remaining <= 3 && remaining > 0;
+  }).length;
 
   // Thẻ "Tổng học viên" luôn đúng số hiện có (kể cả khi demo 500 học viên)
   const dashboardStats = stats.map((stat, index) =>
@@ -349,12 +407,13 @@ function DashboardPage() {
 
   // ----- (4) GIAO DIỆN -----
   return (
-    <Page ref={scrollRef} className="bg-gray-50 min-h-screen">
+    <Page className="h-full w-full overflow-hidden bg-slate-100">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden">
       {/* Màn hình Tổng quan chính */}
       <div>
-        {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+        {/* Header — giữ safe-area để tiêu đề không bị thanh trạng thái che */}
         <div
-          className="bg-white border-b border-gray-200 px-4 pb-3 sticky top-0 z-30 pr-24"
+          className="bg-white border-b border-gray-200 px-4 md:px-8 pb-3 sticky top-0 z-30 pr-24"
           style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
         >
           <div className="flex items-center gap-2">
@@ -365,10 +424,10 @@ function DashboardPage() {
           </div>
         </div>
 
-        {/* Content — chỉ <Page> cuộn, không lồng thêm vùng cuộn */}
-        <div className="p-4 space-y-6 pb-28">
-          {/* (1) 4 thẻ thống kê — lưới 2x2 */}
-          <div className="grid grid-cols-2 gap-3">
+        {/* Nội dung: PC dùng 4 thẻ ngang + lưới 2 cột, mobile giữ 1 cột */}
+        <div className="space-y-6 px-4 md:px-8 pt-4 md:pt-6 pb-28 md:pb-8">
+          {/* (1) 4 thẻ thống kê */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             {dashboardStats.map((stat, index) => (
               <StatCard key={index} {...stat} />
             ))}
@@ -379,24 +438,27 @@ function DashboardPage() {
             <button
               type="button"
               onClick={handleOpenUnreadZalo}
-              className="w-full bg-blue-50 border border-blue-300 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-1 active:bg-blue-100"
+              className="w-full bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-center active:bg-blue-100"
             >
-              <span className="text-sm font-bold text-blue-800">
-                {unreadClients.length} học viên đang chờ PT trả lời Zalo
+              <span className="min-w-0">
+                <span className="block text-sm font-bold text-blue-800">
+                  {unreadClients.length} học viên đang chờ PT trả lời Zalo
+                </span>
+                <span className="block text-xs text-blue-700 mt-0.5">
+                  Học viên có tin nhắn mới luôn nằm đầu danh sách ưu tiên
+                </span>
               </span>
-              <span className="text-xs text-blue-700">Học viên có tin nhắn mới luôn nằm đầu danh sách ưu tiên</span>
-              <span className="mt-1 inline-flex items-center justify-center text-center px-4 py-1.5 rounded-full bg-blue-600 text-white text-xs font-bold">
+              <span className="inline-flex items-center justify-center text-center px-4 py-1.5 rounded-full bg-blue-600 text-white text-xs font-bold shrink-0">
                 Mở danh sách chờ phản hồi
               </span>
             </button>
           )}
 
-          {/* (3) Danh mục quản lý — đặt ngay dưới thẻ thống kê để PT vào nhanh tính năng chính */}
-          <div className="bg-white rounded-xl shadow-sm p-4 space-y-3">
+          {/* (3) Danh mục quản lý: đã có trên sidebar PC nên ẩn từ md trở lên */}
+          <div className="bg-white rounded-xl shadow-sm p-4 space-y-3 md:hidden">
             <Text.Title size="medium" className="font-bold text-gray-900">Danh mục quản lý</Text.Title>
             <div className="grid grid-cols-2 gap-3">
-              {/* Mỗi nút dùng thẻ <button> thường + nền pastel; khi nhấn chỉ đậm hơn 1 cấp
-                  (100 -> 200) và chữ vẫn đậm 800/900 nên luôn đọc được, không bị thành nền xanh đậm */}
+              {/* Mỗi nút dùng nền pastel; khi nhấn chỉ đậm hơn 1 cấp để chữ luôn rõ */}
               <button
                 type="button"
                 className="bg-blue-100 hover:bg-blue-100 focus:bg-blue-100 active:bg-blue-200 text-blue-800 focus:text-blue-800 active:text-blue-900 border border-blue-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
@@ -432,44 +494,88 @@ function DashboardPage() {
             </div>
           </div>
 
-          {/* (4) Học viên cần theo dõi (vắng từ 7 ngày) */}
-          <div ref={inactiveSectionRef} className="bg-white rounded-xl shadow-sm">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between gap-2">
-              <Text.Title size="large" className="font-bold text-gray-900">
-                Học viên cần theo dõi (vắng từ 7 ngày)
-              </Text.Title>
-              <Button className="inline-flex items-center justify-center text-center flex-shrink-0" variant="text" size="small" onClick={handleOpenInactiveList}>Xem tất cả</Button>
-            </div>
-            <div className="p-4 space-y-3">
-              {inactiveClients.map((client) => (
-                <InactiveClientCard key={client.id} client={client} onClick={handleOpenDetail} />
-              ))}
-              {inactiveClients.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <Text>Không có học viên cần hỏi thăm. Tuyệt vời!</Text>
+          {/* (4) Lưới dashboard PC: học viên cần theo dõi bên trái, hoạt động/lịch tập bên phải */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-5 lg:gap-6 items-start">
+            {/* Cột trái rộng hơn: danh sách học viên cần chăm sóc */}
+            <div className="md:col-span-7 min-w-0">
+              <div ref={inactiveSectionRef} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-full">
+                <div className="p-4 md:p-5 border-b border-slate-100 flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <Text.Title size="large" className="font-bold text-gray-900">
+                      Học viên cần theo dõi &amp; tương tác
+                    </Text.Title>
+                    <Text className="text-xs text-gray-500 mt-0.5">{inactiveCount} khách vắng từ 7 ngày</Text>
+                  </div>
+                  <Button className="inline-flex items-center justify-center text-center flex-shrink-0" variant="text" size="small" onClick={handleOpenInactiveList}>Xem tất cả</Button>
                 </div>
-              )}
+                <div className="p-3 md:p-4 space-y-2">
+                  {inactiveClients.map((client) => (
+                    <InactiveClientCard
+                      key={client.id}
+                      client={client}
+                      onClick={handleOpenDetail}
+                      onContactZalo={contactClientViaZalo}
+                    />
+                  ))}
+                  {inactiveClients.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Text>Không có học viên cần hỏi thăm. Tuyệt vời!</Text>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
 
-          {/* (5) Buổi tập sắp tới — xem nhanh ở cuối trang */}
-          <div className="bg-white rounded-xl shadow-sm">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <Text.Title size="large" className="font-bold text-gray-900">Buổi tập sắp tới</Text.Title>
-              <Button className="inline-flex items-center justify-center text-center" variant="text" size="small" onClick={() => goTo("/workouts")}>Xem lịch</Button>
-            </div>
-            <div className="p-4 space-y-3">
-              {upcomingSessions.map((session) => (
-                <UpcomingSessionRow key={session.id} session={session} onClick={() => goTo("/workouts")} />
-              ))}
-              {upcomingSessions.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <Text>Chưa có buổi tập nào sắp tới.</Text>
+            {/* Cột phải: tổng hợp hoạt động + lịch tập sắp tới */}
+            <div className="md:col-span-5 min-w-0">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-full flex flex-col">
+                <div className="p-4 md:p-5 border-b border-slate-100">
+                  <Text.Title size="large" className="font-bold text-gray-900">
+                    Tổng hợp hoạt động &amp; Lịch tập hôm nay
+                  </Text.Title>
+                  <Text className="text-xs text-gray-500 mt-0.5">Ưu tiên khách chờ Zalo và các buổi tập gần nhất</Text>
                 </div>
-              )}
+
+                <div className="p-3 md:p-4 space-y-4 flex-1">
+                  {/* 3 chỉ số nhanh */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-xl bg-rose-50 border border-rose-200 p-2.5 flex flex-col items-center justify-center text-center">
+                      <span className="text-lg font-bold text-rose-700">{unreadClients.length}</span>
+                      <span className="text-[10px] font-semibold text-rose-600">Chờ Zalo</span>
+                    </div>
+                    <div className="rounded-xl bg-amber-50 border border-amber-200 p-2.5 flex flex-col items-center justify-center text-center">
+                      <span className="text-lg font-bold text-amber-700">{inactiveCount}</span>
+                      <span className="text-[10px] font-semibold text-amber-600">Vắng &gt;= 7</span>
+                    </div>
+                    <div className="rounded-xl bg-orange-50 border border-orange-200 p-2.5 flex flex-col items-center justify-center text-center">
+                      <span className="text-lg font-bold text-orange-700">{lowSessionCount}</span>
+                      <span className="text-[10px] font-semibold text-orange-600">Sắp hết gói</span>
+                    </div>
+                  </div>
+
+                  {/* Danh sách buổi tập sắp tới */}
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="text-xs font-bold text-slate-700">Buổi tập sắp tới</span>
+                      <Button className="inline-flex items-center justify-center text-center" variant="text" size="small" onClick={() => goTo("/workouts")}>Xem lịch</Button>
+                    </div>
+                    <div className="space-y-2">
+                      {upcomingSessions.map((session) => (
+                        <UpcomingSessionRow key={session.id} session={session} onClick={() => goTo("/workouts")} />
+                      ))}
+                      {upcomingSessions.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          <Text>Chưa có buổi tập nào sắp tới.</Text>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      </div>
       </div>
     </Page>
   );

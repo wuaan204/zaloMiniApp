@@ -17,7 +17,7 @@ if (!window.APP_CONFIG) {
   window.APP_CONFIG = appConfig;
 }
 
-// Mount the app
+// Mount the app — Layout chứa khung responsive (sidebar PC + bottom navigation mobile)
 import Layout from "./components/layout";
 // Context dùng chung: giữ state (học viên, buổi tập, InBody...) cho mọi trang
 import { AppProvider } from "./context/AppContext";

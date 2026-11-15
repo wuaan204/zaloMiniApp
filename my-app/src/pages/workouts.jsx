@@ -218,7 +218,8 @@ export function WorkoutAddView() {
   };
 
   return (
-    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100">
+    <Page className="h-full w-full overflow-hidden bg-slate-100">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-28 space-y-4">
       {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
         className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 pr-24"
@@ -328,6 +329,7 @@ export function WorkoutAddView() {
           <Button className="inline-flex items-center justify-center text-center" variant="primary" type="submit">Tạo buổi tập</Button>
         </div>
       </form>
+      </div>
     </Page>
   );
 }
@@ -407,7 +409,8 @@ export function WorkoutDetailView() {
   };
 
   return (
-    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100">
+    <Page className="h-full w-full overflow-hidden bg-slate-100">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-28 space-y-4">
       {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
         className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 pr-24"
@@ -548,6 +551,7 @@ export function WorkoutDetailView() {
           </Text>
         </div>
       )}
+      </div>
     </Page>
   );
 }
@@ -662,11 +666,12 @@ export default function WorkoutsPage() {
 
   // ----- (4) GIAO DIỆN -----
   return (
-    <Page ref={scrollRef} className="bg-slate-100 min-h-screen">
+    <Page className="h-full w-full overflow-hidden bg-slate-100">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden">
       <div>
           {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
           <div
-            className="bg-white border-b border-gray-200 px-4 pb-3 sticky top-0 z-30 pr-24"
+            className="bg-white border-b border-gray-200 px-4 md:px-8 pb-3 sticky top-0 z-30 pr-24"
             style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
           >
             <div className="flex items-center gap-2">
@@ -679,7 +684,7 @@ export default function WorkoutsPage() {
           </div>
 
           {/* Search & Filter */}
-          <div className="p-4 pb-28 space-y-3">
+          <div className="px-4 md:px-8 pt-4 pb-28 space-y-3">
             {/* Search Input */}
             <div className="flex gap-3">
               <div className="relative flex-1">
@@ -790,6 +795,7 @@ export default function WorkoutsPage() {
             </div>
           </div>
         </div>
+      </div>
     </Page>
   );
 }

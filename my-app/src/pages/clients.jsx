@@ -49,101 +49,62 @@ const quickMessages = [
 ];
 
 // ============================================
-// (2) THẺ HỌC VIÊN
+// (2) DÒNG HỌC VIÊN CRM (LEFT-RIGHT, MẬT ĐỘ CAO)
 // ============================================
-function ClientCard({ client, onClick, onContactZalo }) {
-  // Tiến độ gói tập + trạng thái + số buổi còn lại
-  const progress = Math.round((client.packageUsed / client.packageTotal) * 100);
-  const statusInfo = getStatusBadge(client.status);
-  const remainingSessions = client.packageTotal - client.packageUsed;
-  // Số điện thoại chỉ giữ chữ số để tạo link zalo.me chính xác
+function ClientRow({ client, onClick, onContactZalo }) {
+  // Số buổi còn lại + số điện thoại sạch để tạo link zalo.me
+  const remainingSessions = Math.max(0, client.packageTotal - client.packageUsed);
   const cleanPhone = String(client.phone || "").replace(/\D/g, "");
+
+  // Ưu tiên trạng thái: tin Zalo mới -> vắng lâu -> số buổi còn lại
+  let statusText = `Còn ${remainingSessions}/${client.packageTotal} buổi`;
+  let statusClass = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+  if (client.hasUnreadZalo === true) {
+    statusText = "Tin nhắn mới";
+    statusClass = "bg-blue-50 text-blue-700 border border-blue-200";
+  } else if (client.inactiveDays >= 7) {
+    statusText = `Vắng ${client.inactiveDays} ngày`;
+    statusClass = "bg-red-50 text-red-700 border border-red-200";
+  }
 
   return (
     <div
-      className={`rounded-xl border shadow-sm p-4 cursor-pointer transition-colors ${
-        client.hasUnreadZalo
-          ? "border-blue-400 bg-blue-50/30"
-          : "border-slate-300 bg-white hover:bg-slate-50"
-      }`}
+      className="flex items-center justify-between gap-3 p-3 bg-white rounded-xl border border-slate-200 mb-2 cursor-pointer"
       onClick={() => onClick(client)}
     >
-      {/* Dòng đầu: avatar, họ tên, số điện thoại, trạng thái */}
-      <div className="flex items-start gap-3">
-        <Avatar size="large" src={client.avatar} alt={client.name} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <Text.Title size="medium" className="font-semibold text-gray-900 truncate">{client.name}</Text.Title>
-              <Text className="text-sm text-gray-500">{client.phone}</Text>
-            </div>
-            <span className={`inline-flex items-center justify-center text-center px-2.5 py-0.5 text-xs font-medium rounded-full flex-shrink-0 ${
-              statusInfo.variant === "success" ? "bg-green-100 text-green-800" :
-              statusInfo.variant === "warning" ? "bg-yellow-100 text-yellow-800" :
-              statusInfo.variant === "danger" ? "bg-red-100 text-red-800" :
-              "bg-gray-100 text-gray-800"
-            }`}>
-              {statusInfo.text}
-            </span>
-          </div>
+      {/* Bên trái: tên + mục tiêu, bên dưới là tin nhắn Zalo gần nhất */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="font-bold text-slate-800 text-sm truncate">{client.name}</span>
+          <span className="text-xs text-slate-500 truncate shrink-0">{client.goal}</span>
         </div>
+        <p className={`truncate text-xs mt-1 ${client.hasUnreadZalo === true ? "text-blue-700 font-medium" : "text-slate-500"}`}>
+          {client.lastZaloMessage || "Chưa có tin nhắn Zalo"}
+        </p>
       </div>
 
-      {/* Khách vừa nhắn Zalo: badge cảnh báo + nội dung tin nhắn mới nhất */}
-      {client.hasUnreadZalo && (
-        <div className="mt-3">
-          <span className="flex items-center justify-center text-center w-full px-2 py-1 rounded-full bg-blue-600 text-white text-xs font-semibold">
-            Tin nhắn Zalo mới
-          </span>
-          <div className="mt-2 bg-white border border-blue-200 rounded-lg p-2">
-            <Text className="text-sm text-gray-900 leading-snug">{client.lastZaloMessage}</Text>
-            <Text className="text-xs text-gray-500 mt-1">{client.lastZaloTime}</Text>
-          </div>
-        </div>
-      )}
-
-      {/* 3 pill: mục tiêu, gói tập, số ngày chưa tương tác */}
-      <div className="grid grid-cols-3 gap-2 mt-3 mb-2">
-        <span className={`flex items-center justify-center text-center px-2 py-1.5 rounded-full text-xs font-semibold w-full min-w-0 ${pillClasses("goal")}`}>
-          {client.goal}
+      {/* Bên phải: badge trạng thái + nút mở Zalo trực tiếp */}
+      <div className="shrink-0 flex flex-col items-end justify-center gap-1">
+        <span className={`inline-flex items-center justify-center text-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusClass}`}>
+          {statusText}
         </span>
-        <span className={`flex items-center justify-center text-center px-2 py-1.5 rounded-full text-xs font-semibold w-full min-w-0 ${pillClasses("package")}`}>
-          Gói {client.packageTotal} buổi
-        </span>
-        <span className={`flex items-center justify-center text-center px-2 py-1.5 rounded-full text-xs font-semibold w-full min-w-0 leading-tight ${pillClasses("contact", client.inactiveDays)}`}>
-          {client.inactiveDays >= 7 ? "Cần theo dõi" : inactiveLabel(client.inactiveDays)}
-        </span>
+        {/* Thẻ <a> thật để iOS/Zalo WebView mở link ngay khi chạm.
+            Chỉ stopPropagation, KHÔNG gọi e.preventDefault() để link luôn hoạt động */}
+        <a
+          href={"https://zalo.me/" + cleanPhone}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(event) => {
+            // Tránh click lan lên dòng cha (không mở trang chi tiết)
+            event.stopPropagation();
+            // Đánh dấu đã trả lời trong Context, link vẫn tự mở nhờ thẻ <a>
+            onContactZalo(client.id, client.phone);
+          }}
+          className="px-3 py-1 rounded-lg bg-blue-600 text-white text-xs font-semibold flex items-center justify-center text-center"
+        >
+          {client.hasUnreadZalo === true ? "Trả lời" : "Nhắn Zalo"}
+        </a>
       </div>
-
-      {/* Tiến độ gói tập */}
-      <div className="mb-2">
-        <div className="flex justify-between text-xs mb-1">
-          <Text className="text-gray-500">Tiến độ</Text>
-          <Text className={`font-medium ${remainingSessions <= 3 ? "text-red-600" : "text-gray-900"}`}>
-            {client.packageUsed}/{client.packageTotal} buổi
-          </Text>
-        </div>
-        <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div className="h-full bg-blue-600 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
-
-      {/* Nút Zalo: dùng thẻ <a> thật để iOS/Zalo WebView tin tưởng mở link khi người dùng chạm.
-          KHÔNG gọi e.preventDefault() để Universal Link của Zalo được kích hoạt */}
-      <a
-        href={"https://zalo.me/" + cleanPhone}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-2 w-full flex items-center justify-center text-center py-2 rounded-lg bg-blue-600 text-white text-xs font-semibold no-underline active:bg-blue-700"
-        onClick={(event) => {
-          // Ngăn sự kiện click lan lên thẻ cha (tránh mở trang chi tiết)
-          event.stopPropagation();
-          // Chỉ cập nhật trạng thái đã liên hệ; link vẫn tự mở nhờ thẻ <a>
-          onContactZalo(client.id, client.phone);
-        }}
-      >
-        {client.hasUnreadZalo ? "Mở Zalo trả lời" : "Nhắn tin Zalo"}
-      </a>
     </div>
   );
 }
@@ -183,7 +144,8 @@ export function ClientAddView() {
   };
 
   return (
-    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100">
+    <Page className="h-full w-full overflow-hidden bg-slate-100">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-28 space-y-4">
       {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
         className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 pr-24"
@@ -226,6 +188,7 @@ export function ClientAddView() {
           <Button className="inline-flex items-center justify-center text-center" variant="primary" htmlType="submit">Thêm học viên</Button>
         </div>
       </form>
+      </div>
     </Page>
   );
 }
@@ -286,7 +249,8 @@ export function ClientDetailView() {
   const cleanPhone = String(client.phone || "").replace(/\D/g, "");
 
   return (
-    <Page ref={scrollRef} className="p-4 pb-28 space-y-4 bg-slate-100">
+    <Page className="h-full w-full overflow-hidden bg-slate-100">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-28 space-y-4">
       {/* Header inside page — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
         className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 px-0 pr-24"
@@ -433,6 +397,7 @@ export function ClientDetailView() {
             </div>
           ))
         )}
+      </div>
       </div>
     </Page>
   );
@@ -636,10 +601,11 @@ export default function ClientsPage() {
 
   // ----- (5) GIAO DIỆN -----
   return (
-    <Page ref={scrollRef} className="bg-slate-100 min-h-screen">
+    <Page className="h-full w-full overflow-hidden bg-slate-100">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden">
       {/* Thanh tiêu đề: chừa chỗ cho thanh trạng thái và nút capsule của Zalo */}
       <div
-        className="bg-white border-b border-gray-200 px-4 pb-3 sticky top-0 z-30"
+        className="bg-white border-b border-gray-200 px-4 md:px-8 pb-3 sticky top-0 z-30"
         style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
       >
         {/* Hàng tiêu đề: chỉ hàng này chừa pr-24 để tránh nút capsule của Zalo */}
@@ -666,7 +632,7 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="p-4 pb-28 space-y-3">
+      <div className="px-4 md:px-8 pt-4 pb-28 space-y-3">
         {/* ----- BẢNG CÔNG CỤ DEMO: TẠO DỮ LIỆU LỚN + GIẢ LẬP WEBHOOK ZALO ----- */}
         {showDemoPanel && (
           <div className="bg-white rounded-xl border border-blue-200 shadow-sm p-4 space-y-4">
@@ -790,11 +756,11 @@ export default function ClientsPage() {
           Thứ tự ưu tiên: khách vừa nhắn Zalo → đang chờ trả lời → vắng mặt lâu nhất
         </Text>
 
-        {/* Danh sách học viên ưu tiên (mỗi lần chỉ render 20 thẻ) */}
-        <div ref={listTopRef} className="flex flex-col space-y-3 scroll-mt-40">
+        {/* Danh sách học viên ưu tiên (mỗi dòng gọn, tối đa 20 dòng mỗi lần) */}
+        <div ref={listTopRef} className="flex flex-col scroll-mt-40">
           {visibleClients.length > 0 ? (
             visibleClients.map((c) => (
-              <ClientCard key={c.id} client={c} onClick={handleOpenDetail} onContactZalo={handleContactZalo} />
+              <ClientRow key={c.id} client={c} onClick={handleOpenDetail} onContactZalo={handleContactZalo} />
             ))
           ) : (
             <div className="bg-white rounded-xl shadow-sm p-8 text-center">
@@ -816,6 +782,7 @@ export default function ClientsPage() {
             </Button>
           )}
         </div>
+      </div>
       </div>
     </Page>
   );

@@ -143,7 +143,7 @@ const CalendarIcon = ({ className = "w-3.5 h-3.5 text-slate-400" }) => (
 function PageHeader({ title, subtitle, onBack }) {
   return (
     <div
-      className="bg-white border-b border-gray-200 px-4 pb-3 sticky top-0 z-30 pr-24"
+      className="bg-white border-b border-gray-200 px-4 md:px-8 pb-3 sticky top-0 z-30 pr-24"
       style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
     >
       <div className="flex items-center gap-2">
@@ -493,14 +493,15 @@ export function ProgressAddView() {
   };
 
   return (
-    <Page ref={scrollRef} className="bg-slate-100 pb-28">
+    <Page className="h-full w-full overflow-hidden bg-slate-100">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28">
       <PageHeader
         title="Thêm bản ghi InBody"
         subtitle={client.name + " • " + client.phone}
         onBack={() => navigate(-1)}
       />
 
-      <form onSubmit={handleSubmit} className="p-4 space-y-4">
+      <form onSubmit={handleSubmit} className="p-4 md:px-8 space-y-4">
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
           <p className="text-[11px] text-blue-800 leading-relaxed">
             Nhập chỉ số từ máy InBody sau buổi đo. Bản ghi mới sẽ được thêm lên đầu danh sách và cập nhật ngay phần tổng quan.
@@ -802,6 +803,7 @@ export function ProgressAddView() {
           </button>
         </div>
       </form>
+      </div>
     </Page>
   );
 }
@@ -874,7 +876,8 @@ export default function ProgressPage() {
 
   // ----- (4) GIAO DIỆN -----
   return (
-    <Page ref={scrollRef} className="bg-slate-100 pb-28">
+    <Page className="h-full w-full overflow-hidden bg-slate-100">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28">
       {/* Màn hình chính (luôn hiển thị phía sau lớp trượt) */}
       <div>
           <PageHeader
@@ -884,7 +887,7 @@ export default function ProgressPage() {
           />
 
           {/* Sub-header: tìm kiếm + nút thêm + bộ chọn học viên */}
-          <div className="px-4 pt-3 space-y-3">
+          <div className="px-4 md:px-8 pt-3 space-y-3">
             <div className="flex items-center gap-2">
               <div className="relative flex-1 min-w-0">
                 <svg
@@ -955,7 +958,7 @@ export default function ProgressPage() {
             </div>
           </div>
 
-          <div className="p-4 space-y-4">
+          <div className="px-4 md:px-8 pt-4 space-y-4">
             {/* ---------- Tổng quan hiện tại ---------- */}
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
               <div className="flex items-start justify-between gap-2">
@@ -1061,6 +1064,7 @@ export default function ProgressPage() {
             )}
           </div>
         </div>
+      </div>
     </Page>
   );
 }

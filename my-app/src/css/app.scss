@@ -321,3 +321,95 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     stroke: #0f172a !important;
   }
 }
+
+/* ============================================
+   GIẢI PHÓNG CHIỀU RỘNG TRÊN PC / DESKTOP
+   ============================================
+   Zalo Mini App mặc định giới hạn khung mobile. Từ 768px trở lên
+   ta mở rộng toàn bộ #app / .zaui-app / .zaui-page để sidebar trái
+   và vùng nội dung phải có đủ không gian, không bị ép nhỏ.
+   ============================================ */
+@media (min-width: 768px) {
+  #app,
+  .zaui-app,
+  .zaui-page {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    /* Không ép trang cao hơn khung main có padding ngoài */
+    min-height: 100% !important;
+  }
+
+  /* Khung AnimationRoutes phải cao bằng vùng nội dung để trang tự cuộn */
+  .zaui-routes {
+    height: 100%;
+    min-width: 0;
+  }
+
+  .zaui-routes .zaui-routes-item {
+    max-width: 100% !important;
+    max-height: 100% !important;
+  }
+}
+
+/* ============================================
+   PHASE 1 — SINGLE SCROLL CONTAINER
+   Chỉ các page bên trong mới được cuộn (div ref=scrollRef).
+   Toàn bộ khung ngoài khoá overflow để không sinh scrollbar thứ hai.
+   ============================================ */
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.zaui-app,
+.zaui-routes,
+.zaui-routes-item,
+.zaui-page {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* ============================================
+   PHASE 1 — NAVIGATION SHELL
+   Chỉ các rule phục vụ sidebar/rail/bottom nav.
+   ============================================ */
+
+/* Sidebar/rail: luôn chừa vùng cho status bar của simulator (khi env = 0) */
+.app-sidebar {
+  padding-top: 44px;
+  padding-top: max(env(safe-area-inset-top, 0px), 44px);
+}
+
+/* Bottom nav: nội dung luôn cao tối thiểu 64px; safe area chỉ cộng thêm một lần. */
+.app-bottom-nav {
+  padding-bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.app-bottom-nav__inner {
+  min-height: 64px;
+}
+
+/* Single page scroller: vẫn cuộn được nhưng không chiếm 15px chiều rộng
+   và không tạo cảm giác khung hẹp trên mobile/desktop. */
+.app-page-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.app-page-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}

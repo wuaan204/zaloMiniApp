@@ -761,10 +761,13 @@ export function AppProvider({ children }) {
     );
   };
 
+  // Số học viên đang chờ PT trả lời Zalo (dùng cho sidebar desktop và bottom nav)
+  const unreadZaloCount = clients.filter((c) => c.hasUnreadZalo === true).length;
+
   // Gom toàn bộ state + handler vào một object để chia sẻ qua Context
   const value = {
     clients, selectedClient, setSelectedClient, addClient, updateClient, deleteClient, addNote,
-    activeClientFilter, setActiveClientFilter,
+    activeClientFilter, setActiveClientFilter, unreadZaloCount,
     generateBulkClients, resetDefaultClients, simulateIncomingZaloWebhook, contactClientViaZalo,
     selectedInactiveClient, setSelectedInactiveClient,
     sessions, selectedSession, setSelectedSession, addSession, updateSession, deleteSession,
