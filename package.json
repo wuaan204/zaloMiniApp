@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "opencode-context-guard": "^0.3.1"
+  }
+}
