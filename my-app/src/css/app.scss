@@ -20,7 +20,7 @@ html, body, #app {
 }
 
 .safe-area-top {
-  padding-top: env(safe-area-inset-top, 44px);
+  padding-top: max(env(safe-area-inset-top, 0px), 36px);
 }
 
 /* ============================================
@@ -385,10 +385,10 @@ body,
    Chỉ các rule phục vụ sidebar/rail/bottom nav.
    ============================================ */
 
-/* Sidebar/rail: luôn chừa vùng cho status bar của simulator (khi env = 0) */
+/* Sidebar/rail: phần chừa chỗ cho status bar nằm ở header thương hiệu bên trong
+   (xem desktop-sidebar.jsx) nên khung ngoài không cộng thêm padding. */
 .app-sidebar {
-  padding-top: 44px;
-  padding-top: max(env(safe-area-inset-top, 0px), 44px);
+  padding-top: 0 !important;
 }
 
 /* Bottom nav: nội dung luôn cao tối thiểu 64px; safe area chỉ cộng thêm một lần. */
@@ -412,4 +412,30 @@ body,
   width: 0;
   height: 0;
   display: none;
+}
+
+/* ============================================
+   PHASE 2 — KHOÁ KHUNG NGOÀI, CHỈ TRANG BÊN TRONG ĐƯỢC CUỘN
+   ============================================
+   Vì sao cần phần này (dễ giải thích khi bảo vệ luận văn):
+   - ZaUI bọc mỗi trang bằng nhiều lớp: .zaui-app > .zaui-routes >
+     .zaui-routes-item > .zaui-page.
+   - Nếu các lớp này cũng có overflow thì sẽ sinh thanh cuộn thứ hai
+     bên cạnh thanh cuộn của <div ref={scrollRef}> trong từng trang.
+   - Khoá overflow/height của toàn bộ khung ngoài giúp chỉ còn MỘT
+     vùng cuộn duy nhất là nội dung trang.
+   ============================================ */
+html,
+body,
+#app,
+.zaui-app,
+.zaui-routes,
+.zaui-routes-item,
+.zaui-page {
+  overflow: hidden !important;
+  height: 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }

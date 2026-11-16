@@ -96,8 +96,11 @@ export default function DesktopSidebar({
         collapsed ? "lg:w-[76px]" : "lg:w-[264px]"
       }`}
     >
-      {/* Thương hiệu: rail chỉ hiện logo, desktop hiện đầy đủ tên hệ thống */}
-      <div className="flex items-center gap-3 px-2 md:justify-center lg:justify-start">
+      {/* Thương hiệu: chừa 36px cho thanh trạng thái (12:00, Wi-Fi, pin) để không bị che */}
+      <div
+        className="flex items-center gap-3 px-2 pb-2 md:justify-center lg:justify-start"
+        style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 36px)" }}
+      >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-600 text-white shadow-nav">
           <NavIcon name="gym" className="h-5 w-5" />
         </div>

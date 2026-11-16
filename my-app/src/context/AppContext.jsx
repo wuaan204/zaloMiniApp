@@ -3,6 +3,17 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 // và openWebview để mở link Zalo trong môi trường Mini App
 import { configAppView, openWebview } from "zmp-sdk/apis";
 
+// Danh sách các khung giờ dạy tiêu chuẩn trong ngày của PT
+export const STANDARD_TIME_SLOTS = [
+  "06:30 - 07:30",
+  "07:45 - 08:45",
+  "09:00 - 10:00",
+  "14:00 - 15:00",
+  "16:00 - 17:00",
+  "18:00 - 19:00",
+  "19:30 - 20:30",
+];
+
 // ============================================
 // (1) DỮ LIỆU MẪU (mock data) dùng chung cho toàn app
 // ============================================
@@ -177,13 +188,21 @@ const past1 = "2026-10-12";
 const past2 = "2026-10-10";
 const past3 = "2026-10-08";
 
+// Mỗi buổi tập có đủ 2 bộ trường:
+// - Trường mới dùng cho bảng khung giờ: clientId, dateLabel, workoutType, progressText
+// - Trường cũ vẫn giữ để các màn hình hiện tại hiển thị: focus, sessionNumber
+// Buổi tập trong quá khứ dùng dateLabel "Ngày trước" để không chiếm ca của Hôm nay/Ngày mai.
 const initialSessions = [
   {
     id: 1,
+    clientId: 1,
     clientName: "Nguyễn Văn An",
     phone: "0901 234 567",
     date: today,
+    dateLabel: "Hôm nay",
     time: "06:30 - 07:30",
+    workoutType: "Thân trên - Ngực & Tay sau",
+    progressText: "Buổi 9/24",
     focus: "Thân trên - Ngực & Tay sau",
     sessionNumber: "Buổi 9/24",
     status: "Sắp tới",
@@ -191,10 +210,14 @@ const initialSessions = [
   },
   {
     id: 2,
+    clientId: 2,
     clientName: "Trần Thị Bình",
     phone: "0912 345 678",
     date: today,
+    dateLabel: "Hôm nay",
     time: "07:45 - 08:45",
+    workoutType: "Chân & Mông",
+    progressText: "Buổi 16/36",
     focus: "Chân & Mông",
     sessionNumber: "Buổi 16/36",
     status: "Cần nhắc lịch",
@@ -202,10 +225,14 @@ const initialSessions = [
   },
   {
     id: 3,
+    clientId: 3,
     clientName: "Lê Văn Cường",
     phone: "0923 456 789",
     date: today,
+    dateLabel: "Hôm nay",
     time: "18:00 - 19:00",
+    workoutType: "Cardio & Core",
+    progressText: "Buổi 23/24",
     focus: "Cardio & Core",
     sessionNumber: "Buổi 23/24",
     status: "Sắp tới",
@@ -213,43 +240,59 @@ const initialSessions = [
   },
   {
     id: 4,
+    clientId: 4,
     clientName: "Phạm Thị Dung",
     phone: "0934 567 890",
     date: tomorrow,
-    time: "06:00 - 07:00",
+    dateLabel: "Ngày mai",
+    time: "14:00 - 15:00",
+    workoutType: "Full Body - HIIT",
+    progressText: "Buổi 4/12",
     focus: "Full Body - HIIT",
     sessionNumber: "Buổi 4/12",
     status: "Sắp tới",
-    notes: [{ id: 4, time: "06:00", text: "Quay lại sau nghỉ 2 tuần. Cường độ nhẹ, tập form." }],
+    notes: [{ id: 4, time: "14:00", text: "Quay lại sau nghỉ 2 tuần. Cường độ nhẹ, tập form." }],
   },
   {
     id: 5,
+    clientId: 5,
     clientName: "Hoàng Văn Em",
     phone: "0945 678 901",
     date: tomorrow,
-    time: "17:30 - 18:30",
+    dateLabel: "Ngày mai",
+    time: "16:00 - 17:00",
+    workoutType: "Thân trên - Lưng & Vai",
+    progressText: "Buổi 13/24",
     focus: "Thân trên - Lưng & Vai",
     sessionNumber: "Buổi 13/24",
     status: "Sắp tới",
-    notes: [{ id: 5, time: "17:30", text: "Chuẩn bị marathon 10km. Thêm pull-up band assisted." }],
+    notes: [{ id: 5, time: "16:00", text: "Chuẩn bị marathon 10km. Thêm pull-up band assisted." }],
   },
   {
     id: 6,
+    clientId: 6,
     clientName: "Vũ Thị Phượng",
     phone: "0956 789 012",
     date: tomorrow,
-    time: "19:00 - 20:00",
+    dateLabel: "Ngày mai",
+    time: "19:30 - 20:30",
+    workoutType: "Chân - Squat & Deadlift",
+    progressText: "Buổi 7/24",
     focus: "Chân - Squat & Deadlift",
     sessionNumber: "Buổi 7/24",
     status: "Cần nhắc lịch",
-    notes: [{ id: 6, time: "19:00", text: "Lịch thay đổi từ thứ 3. Cần xác nhận lại giờ." }],
+    notes: [{ id: 6, time: "19:30", text: "Lịch thay đổi từ thứ 3. Cần xác nhận lại giờ." }],
   },
   {
     id: 7,
+    clientId: 7,
     clientName: "Đặng Văn Giang",
     phone: "0967 890 123",
     date: yesterday,
+    dateLabel: "Ngày trước",
     time: "06:30 - 07:30",
+    workoutType: "Ngực & Tay trước",
+    progressText: "Buổi 11/24",
     focus: "Ngực & Tay trước",
     sessionNumber: "Buổi 11/24",
     status: "Đã hoàn thành",
@@ -257,10 +300,14 @@ const initialSessions = [
   },
   {
     id: 8,
+    clientId: 8,
     clientName: "Bùi Thị Hạnh",
     phone: "0978 901 234",
     date: yesterday,
+    dateLabel: "Ngày trước",
     time: "18:00 - 19:00",
+    workoutType: "Mông & Hậu đùi",
+    progressText: "Buổi 5/12",
     focus: "Mông & Hậu đùi",
     sessionNumber: "Buổi 5/12",
     status: "Đã hoàn thành",
@@ -268,49 +315,92 @@ const initialSessions = [
   },
   {
     id: 9,
+    clientId: 9,
     clientName: "Ngô Văn Khải",
     phone: "0989 012 345",
     date: past1,
-    time: "07:00 - 08:00",
+    dateLabel: "Ngày trước",
+    time: "07:45 - 08:45",
+    workoutType: "Cardio - Interval Running",
+    progressText: "Buổi 18/36",
     focus: "Cardio - Interval Running",
     sessionNumber: "Buổi 18/36",
     status: "Đã hoàn thành",
-    notes: [{ id: 9, time: "07:00", text: "8km pace 6:15/km. HR zone 3 duy trì tốt. Tăng 1km tuần sau." }],
+    notes: [{ id: 9, time: "07:45", text: "8km pace 6:15/km. HR zone 3 duy trì tốt. Tăng 1km tuần sau." }],
   },
   {
     id: 10,
+    clientId: 10,
     clientName: "Dương Thị Lan",
     phone: "0990 123 456",
     date: past2,
-    time: "17:00 - 18:00",
+    dateLabel: "Ngày trước",
+    time: "16:00 - 17:00",
+    workoutType: "Thân dưới - Lunge & Step up",
+    progressText: "Buổi 3/24",
     focus: "Thân dưới - Lunge & Step up",
     sessionNumber: "Buổi 3/24",
     status: "Đã dời lịch",
-    notes: [{ id: 10, time: "17:00", text: "Khách bận đột xuất. Đã dời sang 20/10 lúc 17:00." }],
+    notes: [{ id: 10, time: "16:00", text: "Khách bận đột xuất. Đã dời sang 20/10 lúc 16:00." }],
   },
   {
     id: 11,
+    clientId: 11,
     clientName: "Phan Văn Minh",
     phone: "0901 111 222",
     date: past3,
-    time: "06:00 - 07:00",
+    dateLabel: "Ngày trước",
+    time: "09:00 - 10:00",
+    workoutType: "Core & Mobility",
+    progressText: "Buổi 12/24",
     focus: "Core & Mobility",
     sessionNumber: "Buổi 12/24",
     status: "Đã hoàn thành",
-    notes: [{ id: 11, time: "06:00", text: "Plank 3 phút. Bird-dog 3x12. Cải thiện đau lưng dưới." }],
+    notes: [{ id: 11, time: "09:00", text: "Plank 3 phút. Bird-dog 3x12. Cải thiện đau lưng dưới." }],
   },
   {
     id: 12,
+    clientId: 12,
     clientName: "Võ Thị Nga",
     phone: "0912 222 333",
     date: "2026-10-05",
-    time: "18:30 - 19:30",
+    dateLabel: "Ngày trước",
+    time: "19:30 - 20:30",
+    workoutType: "Vai & Tay sau",
+    progressText: "Buổi 8/24",
     focus: "Vai & Tay sau",
     sessionNumber: "Buổi 8/24",
     status: "Đã hoàn thành",
-    notes: [{ id: 12, time: "18:30", text: "Overhead press 30kg x 8. Lateral raise drop set. Form ổn." }],
+    notes: [{ id: 12, time: "19:30", text: "Overhead press 30kg x 8. Lateral raise drop set. Form ổn." }],
   },
 ];
+
+// ----- LƯU / ĐỌC DANH SÁCH BUỔI TẬP -----
+// Giúp lịch vừa đổi vẫn còn khi Zalo mở lại Mini App (ví dụ sau khi gửi tin nhắn)
+const SESSIONS_STORAGE_KEY = "pt_sessions";
+
+// Đọc buổi tập đã lưu; dữ liệu cũ thiếu trường khung giờ thì quay về dữ liệu gốc
+function loadSessionsFromStorage() {
+  try {
+    const saved = sessionStorage.getItem(SESSIONS_STORAGE_KEY);
+    if (!saved) return initialSessions;
+    const parsedSessions = JSON.parse(saved);
+    const isValid = Array.isArray(parsedSessions) && parsedSessions.length > 0 &&
+      parsedSessions.every((s) => s.dateLabel && s.clientId !== undefined && s.time);
+    return isValid ? parsedSessions : initialSessions;
+  } catch (error) {
+    return initialSessions;
+  }
+}
+
+// Lưu danh sách buổi tập vào sessionStorage sau mỗi lần state thay đổi
+function saveSessionsToStorage(sessionList) {
+  try {
+    sessionStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(sessionList));
+  } catch (error) {
+    // Trình duyệt chặn storage -> bỏ qua, app vẫn chạy bình thường
+  }
+}
 
 // ----- Học viên kèm các bản ghi InBody (mới nhất -> cũ nhất) -----
 const initialProgressClients = [
@@ -521,9 +611,12 @@ export function AppProvider({ children }) {
   // Học viên "cần theo dõi" ở Dashboard đang được chọn xem chi tiết
   const [selectedInactiveClient, setSelectedInactiveClient] = useState(null);
 
-  // Danh sách buổi tập và buổi tập đang được chọn xem chi tiết
-  const [sessions, setSessions] = useState(initialSessions);
+  // Danh sách buổi tập (đọc từ sessionStorage nếu có) và buổi tập đang được chọn xem chi tiết
+  const [sessions, setSessions] = useState(loadSessionsFromStorage);
   const [selectedSession, setSelectedSession] = useState(null);
+
+  // Khung giờ được chọn trước từ bảng "Ca trống" để điền sẵn vào form thêm buổi tập
+  const [workoutFormPrefill, setWorkoutFormPrefill] = useState(null);
 
   // Học viên kèm bản ghi InBody và id học viên đang xem ở trang Tiến độ
   const [progressClients, setProgressClients] = useState(initialProgressClients);
@@ -547,6 +640,11 @@ export function AppProvider({ children }) {
   useEffect(() => {
     saveClientsToStorage(clients);
   }, [clients]);
+
+  // Lưu danh sách buổi tập mỗi khi đổi lịch / thêm / xóa buổi tập
+  useEffect(() => {
+    saveSessionsToStorage(sessions);
+  }, [sessions]);
 
   // ----- (3) HANDLERS: học viên -----
 
@@ -712,12 +810,27 @@ export function AppProvider({ children }) {
 
   // ----- HANDLERS: buổi tập -----
 
-  // Thêm buổi tập mới vào đầu danh sách
+  // Thêm buổi tập mới vào đầu danh sách (luôn bổ sung đủ trường khung giờ)
   const addSession = (newSession) => {
+    // Ngày tập thật -> nhãn ngày dùng cho bảng kiểm tra ca trống
+    const sessionDate = newSession.date || today;
+    let dateLabel = "Ngày trước";
+    if (sessionDate === today) dateLabel = "Hôm nay";
+    if (sessionDate === tomorrow) dateLabel = "Ngày mai";
+
+    // Tiến độ buổi tập dạng "Buổi 9/24"
+    const progressText = `Buổi ${newSession.sessionNumber}/24`;
+
     const sessionToAdd = {
       ...newSession,
       id: Date.now(),
-      sessionNumber: `Buổi ${newSession.sessionNumber}/24`,
+      date: sessionDate,
+      dateLabel: dateLabel,
+      workoutType: newSession.workoutType || newSession.focus || "Buổi tập",
+      progressText: newSession.progressText || progressText,
+      sessionNumber: progressText,
+      status: newSession.status || "Sắp tới",
+      notes: newSession.notes || [],
     };
     setSessions([sessionToAdd, ...sessions]);
   };
@@ -733,6 +846,97 @@ export function AppProvider({ children }) {
   // Xóa 1 buổi tập khỏi danh sách
   const deleteSession = (id) => {
     setSessions(sessions.filter((s) => s.id !== id));
+  };
+
+  // Hàm kiểm tra trạng thái Trống / Đã kín của từng khung giờ theo ngày
+  const getSlotAvailability = (dateLabel = "Hôm nay") => {
+    return STANDARD_TIME_SLOTS.map((slot) => {
+      const bookedSession = sessions.find(
+        (s) => s.dateLabel === dateLabel && s.time === slot && s.status !== "Đã hủy"
+      );
+      return {
+        time: slot,
+        dateLabel: dateLabel,
+        isAvailable: !bookedSession,
+        bookedBy: bookedSession ? bookedSession.clientName : null,
+        sessionId: bookedSession ? bookedSession.id : null,
+      };
+    });
+  };
+
+  // Đổi lịch 1 học viên sang khung giờ trống và tự soạn tin nhắn xác nhận cho Zalo
+  const rescheduleClientSession = (clientId, newDateLabel, newTimeSlot) => {
+    // Tìm học viên cần đổi lịch (so sánh String để tránh lệch kiểu số / chuỗi)
+    const client = clients.find((c) => String(c.id) === String(clientId));
+    if (!client) return "";
+
+    // Nhãn ngày -> ngày thật trong dữ liệu
+    const newDate = newDateLabel === "Ngày mai" ? tomorrow : today;
+
+    // Buổi tập sắp tới hiện tại của học viên (nếu có)
+    const upcomingSession = sessions.find(
+      (s) =>
+        String(s.clientId) === String(client.id) &&
+        (s.dateLabel === "Hôm nay" || s.dateLabel === "Ngày mai")
+    );
+
+    // Có lịch sắp tới -> cập nhật đúng buổi đó; chưa có -> tạo buổi tập mới
+    if (upcomingSession) {
+      setSessions(
+        sessions.map((s) =>
+          s.id === upcomingSession.id
+            ? {
+                ...s,
+                date: newDate,
+                dateLabel: newDateLabel,
+                time: newTimeSlot,
+                status: "Sắp tới",
+              }
+            : s
+        )
+      );
+    } else {
+      const newSession = {
+        id: Date.now(),
+        clientId: client.id,
+        clientName: client.name,
+        phone: client.phone,
+        date: newDate,
+        dateLabel: newDateLabel,
+        time: newTimeSlot,
+        workoutType: "Buổi tập cá nhân",
+        progressText: `Buổi ${client.packageUsed + 1}/${client.packageTotal}`,
+        focus: "Buổi tập cá nhân",
+        sessionNumber: `Buổi ${client.packageUsed + 1}/${client.packageTotal}`,
+        status: "Sắp tới",
+        notes: [],
+      };
+      setSessions([newSession, ...sessions]);
+    }
+
+    // Cập nhật trạng thái Zalo: đã trả lời, không còn tính là vắng mặt
+    updateClient(client.id, {
+      hasUnreadZalo: false,
+      inactiveDays: 0,
+      lastZaloTime: "Vừa đổi lịch",
+      lastZaloMessage: "Đã chốt đổi lịch sang " + newTimeSlot + " (" + newDateLabel + ")",
+    });
+
+    // Tin nhắn xác nhận để PT dán thẳng vào cửa sổ chat Zalo
+    const confirmationMessage =
+      "Chào " + client.name + ", mình đã kiểm tra lịch trống và đổi buổi tập của bạn sang khung giờ " +
+      newTimeSlot + " (" + newDateLabel + ") nhé!";
+
+    // Copy tin nhắn vào clipboard (bọc try/catch để không lỗi ngoài Zalo / trình duyệt cũ)
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(confirmationMessage).catch(() => {});
+      }
+    } catch (error) {
+      // Trình duyệt chặn clipboard -> bỏ qua, tin nhắn vẫn hiện trên màn hình
+    }
+
+    return confirmationMessage;
   };
 
   // ----- HANDLERS: bản ghi InBody (luôn thao tác trên học viên đang chọn ở trang Tiến độ) -----
@@ -771,6 +975,8 @@ export function AppProvider({ children }) {
     generateBulkClients, resetDefaultClients, simulateIncomingZaloWebhook, contactClientViaZalo,
     selectedInactiveClient, setSelectedInactiveClient,
     sessions, selectedSession, setSelectedSession, addSession, updateSession, deleteSession,
+    getSlotAvailability, rescheduleClientSession,
+    workoutFormPrefill, setWorkoutFormPrefill,
     progressClients, selectedProgressClientId, setSelectedProgressClientId, addInbodyRecord, deleteInbodyRecord,
   };
 

@@ -6,8 +6,8 @@ import { saveScroll, restoreScroll } from "../utils/scroll";
 
 // ============================================
 // Dữ liệu học viên nằm trong src/context/AppContext.jsx
-// Cấu trúc file: (1) Hàm hỗ trợ, (2) Thẻ học viên, (3) Form thêm học viên,
-// (4) Trang chi tiết, (5) Trang danh sách + phễu lọc ưu tiên + giả lập Zalo
+// Cấu trúc file: (1) Hàm hỗ trợ, (2) Panel đổi lịch nhanh, (3) Thẻ học viên,
+// (4) Form thêm học viên, (5) Trang chi tiết, (6) Trang danh sách + phễu lọc + giả lập Zalo
 // ============================================
 
 // ----- (1) HÀM HỖ TRỢ -----
@@ -49,9 +49,135 @@ const quickMessages = [
 ];
 
 // ============================================
-// (2) DÒNG HỌC VIÊN CRM (LEFT-RIGHT, MẬT ĐỘ CAO)
+// (2) PANEL "ĐỔI LỊCH NHANH" (INLINE TRONG THẺ HỌC VIÊN)
 // ============================================
-function ClientRow({ client, onClick, onContactZalo }) {
+function ReschedulePanel({ client, onClose }) {
+  // Lấy danh sách buổi tập + 2 hàm xử lý khung giờ từ Context dùng chung
+  const { sessions, getSlotAvailability, rescheduleClientSession } = useAppContext();
+
+  // Ngày đang chọn trong panel: "Hôm nay" hoặc "Ngày mai"
+  const [selectedRescheduleDay, setSelectedRescheduleDay] = useState("Hôm nay");
+
+  // Thông báo sau khi chốt đổi lịch (kèm tin nhắn xác nhận đã copy)
+  const [rescheduleNotice, setRescheduleNotice] = useState(null);
+
+  // Danh sách 7 khung giờ kèm trạng thái Trống / Đã kín của ngày đang chọn
+  const slots = getSlotAvailability(selectedRescheduleDay);
+
+  // Buổi tập sắp tới hiện tại của học viên (nếu đã có lịch)
+  const currentSession = sessions.find(
+    (s) =>
+      String(s.clientId) === String(client.id) &&
+      (s.dateLabel === "Hôm nay" || s.dateLabel === "Ngày mai")
+  );
+
+  // Số điện thoại sạch để mở chat Zalo gửi xác nhận
+  const cleanPhone = String(client.phone || "").replace(/\D/g, "");
+
+  // Chạm vào 1 khung giờ trống: đổi lịch + lấy tin nhắn xác nhận
+  const handlePickSlot = (slot) => {
+    const message = rescheduleClientSession(client.id, selectedRescheduleDay, slot.time);
+    if (!message) return;
+    setRescheduleNotice({
+      time: slot.time,
+      day: selectedRescheduleDay,
+      message: message,
+    });
+  };
+
+  return (
+    <div className="border-t border-slate-200 bg-slate-50 p-3">
+      {/* Tiêu đề panel + nút đóng */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p className="text-xs font-bold text-slate-800 leading-snug">
+          Chọn khung giờ trống để đổi lịch cho {client.name}
+        </p>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 px-2 py-0.5 rounded-md bg-white border border-slate-300 text-slate-600 text-[11px] font-semibold flex items-center justify-center text-center"
+          >
+            Đóng
+          </button>
+        )}
+      </div>
+
+      {/* Pills chọn ngày Hôm nay / Ngày mai */}
+      <div className="flex gap-2 mb-2">
+        {["Hôm nay", "Ngày mai"].map((day) => (
+          <button
+            key={day}
+            type="button"
+            onClick={() => setSelectedRescheduleDay(day)}
+            className={`flex-1 flex items-center justify-center text-center px-3 py-1.5 rounded-full text-xs font-semibold border ${
+              selectedRescheduleDay === day
+                ? "bg-blue-600 text-white border-blue-600"
+                : "bg-white text-slate-600 border-slate-300"
+            }`}
+          >
+            {day}
+          </button>
+        ))}
+      </div>
+
+      {/* Lịch hiện tại của học viên */}
+      <p className="text-[11px] text-slate-500 mb-2">
+        {currentSession
+          ? `Lịch hiện tại: ${currentSession.dateLabel} | ${currentSession.time}`
+          : "Lịch hiện tại: Chưa có buổi tập sắp tới"}
+      </p>
+
+      {/* Lưới khung giờ: xanh = còn trống, xám = đã kín */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {slots.map((slot) =>
+          slot.isAvailable ? (
+            <button
+              key={slot.time}
+              type="button"
+              onClick={() => handlePickSlot(slot)}
+              className="bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-300 text-emerald-800 rounded-lg p-2 text-xs font-semibold flex flex-col items-center justify-center text-center"
+            >
+              <span className="font-bold">{slot.time}</span>
+              <span className="text-[10px] mt-0.5">Còn trống - Chạm để chốt</span>
+            </button>
+          ) : (
+            <div
+              key={slot.time}
+              className="bg-slate-100 border border-slate-200 text-slate-400 rounded-lg p-2 text-xs flex flex-col items-center justify-center text-center cursor-not-allowed"
+            >
+              <span className="font-bold">{slot.time}</span>
+              <span className="text-[10px] mt-0.5">Đã kín ({slot.bookedBy})</span>
+            </div>
+          )
+        )}
+      </div>
+
+      {/* Banner xác nhận + nút gửi Zalo ngay */}
+      {rescheduleNotice && (
+        <div className="mt-3 bg-emerald-50 border border-emerald-300 rounded-lg p-2.5">
+          <p className="text-[11px] font-semibold text-emerald-800 text-center">
+            Đã đổi lịch sang {rescheduleNotice.time} ({rescheduleNotice.day}) &amp; copy tin nhắn xác nhận!
+          </p>
+          <p className="text-[11px] text-emerald-700 mt-1 leading-snug">{rescheduleNotice.message}</p>
+          <a
+            href={"https://zalo.me/" + cleanPhone}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 w-full py-2 px-3 rounded-lg bg-blue-600 active:bg-blue-700 text-white text-xs font-semibold flex items-center justify-center text-center no-underline"
+          >
+            Gửi xác nhận qua Zalo ngay
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
+// (3) DÒNG HỌC VIÊN CRM (LEFT-RIGHT, MẬT ĐỘ CAO)
+// ============================================
+function ClientRow({ client, onClick, onContactZalo, isRescheduling, onToggleReschedule }) {
   // Số buổi còn lại + số điện thoại sạch để tạo link zalo.me
   const remainingSessions = Math.max(0, client.packageTotal - client.packageUsed);
   const cleanPhone = String(client.phone || "").replace(/\D/g, "");
@@ -68,49 +194,70 @@ function ClientRow({ client, onClick, onContactZalo }) {
   }
 
   return (
-    <div
-      className="flex items-center justify-between gap-3 p-3 bg-white rounded-xl border border-slate-200 mb-2 cursor-pointer"
-      onClick={() => onClick(client)}
-    >
-      {/* Bên trái: tên + mục tiêu, bên dưới là tin nhắn Zalo gần nhất */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-bold text-slate-800 text-sm truncate">{client.name}</span>
-          <span className="text-xs text-slate-500 truncate shrink-0">{client.goal}</span>
+    <div className="bg-white rounded-xl border border-slate-200 mb-2 overflow-hidden">
+      {/* Dòng chính: thông tin học viên + các nút thao tác nhanh */}
+      <div
+        className="flex items-center justify-between gap-3 p-3 cursor-pointer"
+        onClick={() => onClick(client)}
+      >
+        {/* Bên trái: tên + mục tiêu, bên dưới là tin nhắn Zalo gần nhất */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-bold text-slate-800 text-sm truncate">{client.name}</span>
+            <span className="text-xs text-slate-500 truncate shrink-0">{client.goal}</span>
+          </div>
+          <p className={`truncate text-xs mt-1 ${client.hasUnreadZalo === true ? "text-blue-700 font-medium" : "text-slate-500"}`}>
+            {client.lastZaloMessage || "Chưa có tin nhắn Zalo"}
+          </p>
         </div>
-        <p className={`truncate text-xs mt-1 ${client.hasUnreadZalo === true ? "text-blue-700 font-medium" : "text-slate-500"}`}>
-          {client.lastZaloMessage || "Chưa có tin nhắn Zalo"}
-        </p>
+
+        {/* Bên phải: badge trạng thái + nút đổi lịch nhanh + nút mở Zalo */}
+        <div className="shrink-0 flex flex-col items-end justify-center gap-1">
+          <span className={`inline-flex items-center justify-center text-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusClass}`}>
+            {statusText}
+          </span>
+          <div className="flex items-center gap-1.5">
+            {/* Nút mở/đóng panel chọn khung giờ trống ngay trong thẻ */}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleReschedule(client.id);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-300 text-emerald-800 text-[11px] font-semibold flex items-center justify-center text-center"
+            >
+              Đổi lịch nhanh
+            </button>
+            {/* Thẻ <a> thật để iOS/Zalo WebView mở link ngay khi chạm.
+                Chỉ stopPropagation, KHÔNG gọi e.preventDefault() để link luôn hoạt động */}
+            <a
+              href={"https://zalo.me/" + cleanPhone}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => {
+                // Tránh click lan lên dòng cha (không mở trang chi tiết)
+                event.stopPropagation();
+                // Đánh dấu đã trả lời trong Context, link vẫn tự mở nhờ thẻ <a>
+                onContactZalo(client.id, client.phone);
+              }}
+              className="px-3 py-1 rounded-lg bg-blue-600 text-white text-xs font-semibold flex items-center justify-center text-center"
+            >
+              {client.hasUnreadZalo === true ? "Trả lời" : "Nhắn Zalo"}
+            </a>
+          </div>
+        </div>
       </div>
 
-      {/* Bên phải: badge trạng thái + nút mở Zalo trực tiếp */}
-      <div className="shrink-0 flex flex-col items-end justify-center gap-1">
-        <span className={`inline-flex items-center justify-center text-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${statusClass}`}>
-          {statusText}
-        </span>
-        {/* Thẻ <a> thật để iOS/Zalo WebView mở link ngay khi chạm.
-            Chỉ stopPropagation, KHÔNG gọi e.preventDefault() để link luôn hoạt động */}
-        <a
-          href={"https://zalo.me/" + cleanPhone}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(event) => {
-            // Tránh click lan lên dòng cha (không mở trang chi tiết)
-            event.stopPropagation();
-            // Đánh dấu đã trả lời trong Context, link vẫn tự mở nhờ thẻ <a>
-            onContactZalo(client.id, client.phone);
-          }}
-          className="px-3 py-1 rounded-lg bg-blue-600 text-white text-xs font-semibold flex items-center justify-center text-center"
-        >
-          {client.hasUnreadZalo === true ? "Trả lời" : "Nhắn Zalo"}
-        </a>
-      </div>
+      {/* Panel đổi lịch mở ngay bên dưới đúng thẻ của học viên đó */}
+      {isRescheduling && (
+        <ReschedulePanel client={client} onClose={() => onToggleReschedule(client.id)} />
+      )}
     </div>
   );
 }
 
 // ============================================
-// (3) Trang form thêm học viên (route "/client-add")
+// (4) Trang form thêm học viên (route "/client-add")
 // ============================================
 export function ClientAddView() {
   const navigate = useNavigate();
@@ -145,11 +292,11 @@ export function ClientAddView() {
 
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
-      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-28 space-y-4">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-8 pb-28 space-y-4 bg-slate-100">
       {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
         className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 pr-24"
-        style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
+        style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 36px)" }}
       >
         <BackButton onClick={() => navigate(-1)} />
         <div className="flex-1 min-w-0">
@@ -194,7 +341,7 @@ export function ClientAddView() {
 }
 
 // ============================================
-// (4) Trang chi tiết học viên (route "/client-detail")
+// (5) Trang chi tiết học viên (route "/client-detail")
 // ============================================
 export function ClientDetailView() {
   const navigate = useNavigate();
@@ -213,6 +360,9 @@ export function ClientDetailView() {
   // Nội dung ghi chú đang nhập và trạng thái bật/tắt form ghi chú
   const [newInteraction, setNewInteraction] = useState({ content: "", nextAction: "" });
   const [showAddInteraction, setShowAddInteraction] = useState(false);
+
+  // Bật/tắt panel đổi lịch nhanh ngay trong trang chi tiết
+  const [showReschedule, setShowReschedule] = useState(false);
 
   // Lưu ghi chú tương tác mới vào lịch sử của học viên
   const handleAddInteraction = (e) => {
@@ -250,11 +400,11 @@ export function ClientDetailView() {
 
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
-      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-28 space-y-4">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-8 pb-28 space-y-4 bg-slate-100">
       {/* Header inside page — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
         className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 px-0 pr-24"
-        style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
+        style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 36px)" }}
       >
         <BackButton onClick={() => navigate(-1)} />
         <Avatar size="xlarge" src={client.avatar} alt={client.name} />
@@ -314,6 +464,21 @@ export function ClientDetailView() {
         >
           {client.hasUnreadZalo ? "Mở Zalo trả lời" : "Nhắn tin Zalo"}
         </a>
+
+        {/* Nút đổi lịch nhanh: mở panel chọn khung giờ trống ngay bên dưới */}
+        <button
+          type="button"
+          onClick={() => setShowReschedule(!showReschedule)}
+          className="mt-2 w-full py-2.5 px-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 font-semibold text-sm flex items-center justify-center text-center"
+        >
+          {showReschedule ? "Đóng đổi lịch nhanh" : "Đổi lịch nhanh"}
+        </button>
+
+        {showReschedule && (
+          <div className="mt-2">
+            <ReschedulePanel client={client} onClose={() => setShowReschedule(false)} />
+          </div>
+        )}
       </div>
 
       {/* Tiến độ buổi tập */}
@@ -404,7 +569,7 @@ export function ClientDetailView() {
 }
 
 // ============================================
-// (5) Trang chính: Danh sách học viên (route "/clients")
+// (6) Trang chính: Danh sách học viên (route "/clients")
 // ============================================
 export default function ClientsPage() {
   const navigate = useNavigate();
@@ -441,6 +606,9 @@ export default function ClientsPage() {
   // Học viên + nội dung tin nhắn đang chọn trong bộ giả lập webhook
   const [demoClientId, setDemoClientId] = useState(clients.length > 0 ? String(clients[0].id) : "");
   const [demoMessage, setDemoMessage] = useState("");
+
+  // ID học viên đang mở panel "Đổi lịch nhanh" (null = không mở panel nào)
+  const [reschedulingClientId, setReschedulingClientId] = useState(null);
 
   // Thông báo xác nhận sau khi tạo dữ liệu / nhận webhook
   const [demoNotice, setDemoNotice] = useState("");
@@ -519,7 +687,21 @@ export default function ClientsPage() {
     filteredClients = filteredClients.filter((c) => c.status === "Đang tập");
   }
 
-  // 3) Ưu tiên: khách có tin Zalo chưa trả lời luôn đứng đầu.
+  // 3) Luôn giữ học viên đang mở panel "Đổi lịch nhanh" trong danh sách.
+  //    Nhờ vậy banner xác nhận không biến mất khi trạng thái Zalo vừa đổi.
+  if (reschedulingClientId !== null) {
+    const reschedulingClient = clients.find(
+      (c) => String(c.id) === String(reschedulingClientId)
+    );
+    const isVisible = filteredClients.some(
+      (c) => String(c.id) === String(reschedulingClientId)
+    );
+    if (reschedulingClient && !isVisible) {
+      filteredClients = [reschedulingClient, ...filteredClients];
+    }
+  }
+
+  // 4) Ưu tiên: khách có tin Zalo chưa trả lời luôn đứng đầu.
   //    Trong nhóm đó, ai vừa nhắn gần nhất (unreadTimestamp lớn nhất) đứng trước.
   //    Các khách còn lại xếp theo số ngày vắng mặt giảm dần.
   const sortedClients = [...filteredClients].sort((a, b) => {
@@ -534,7 +716,7 @@ export default function ClientsPage() {
     return b.inactiveDays - a.inactiveDays;
   });
 
-  // 4) Chỉ render 20 học viên mỗi lần để 500+ học viên vẫn mượt
+  // 5) Chỉ render 20 học viên mỗi lần để 500+ học viên vẫn mượt
   const visibleClients = sortedClients.slice(0, visibleCount);
 
   // ----- (4) HANDLERS -----
@@ -599,14 +781,21 @@ export default function ClientsPage() {
     }, 100);
   };
 
+  // Bật/tắt panel đổi lịch nhanh của đúng học viên vừa chạm
+  const handleToggleReschedule = (clientId) => {
+    setReschedulingClientId((currentId) =>
+      String(currentId) === String(clientId) ? null : clientId
+    );
+  };
+
   // ----- (5) GIAO DIỆN -----
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
-      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28 bg-slate-100">
       {/* Thanh tiêu đề: chừa chỗ cho thanh trạng thái và nút capsule của Zalo */}
       <div
-        className="bg-white border-b border-gray-200 px-4 md:px-8 pb-3 sticky top-0 z-30"
-        style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
+        className="bg-white border-b border-gray-200 px-3 sm:px-4 md:px-8 pb-3 sticky top-0 z-30"
+        style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 36px)" }}
       >
         {/* Hàng tiêu đề: chỉ hàng này chừa pr-24 để tránh nút capsule của Zalo */}
         <div className="flex items-center gap-2 pr-24">
@@ -632,7 +821,7 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="px-4 md:px-8 pt-4 pb-28 space-y-3">
+      <div className="px-3 sm:px-4 md:px-8 pt-4 pb-28 space-y-3">
         {/* ----- BẢNG CÔNG CỤ DEMO: TẠO DỮ LIỆU LỚN + GIẢ LẬP WEBHOOK ZALO ----- */}
         {showDemoPanel && (
           <div className="bg-white rounded-xl border border-blue-200 shadow-sm p-4 space-y-4">
@@ -760,7 +949,14 @@ export default function ClientsPage() {
         <div ref={listTopRef} className="flex flex-col scroll-mt-40">
           {visibleClients.length > 0 ? (
             visibleClients.map((c) => (
-              <ClientRow key={c.id} client={c} onClick={handleOpenDetail} onContactZalo={handleContactZalo} />
+              <ClientRow
+                key={c.id}
+                client={c}
+                onClick={handleOpenDetail}
+                onContactZalo={handleContactZalo}
+                isRescheduling={String(reschedulingClientId) === String(c.id)}
+                onToggleReschedule={handleToggleReschedule}
+              />
             ))
           ) : (
             <div className="bg-white rounded-xl shadow-sm p-8 text-center">

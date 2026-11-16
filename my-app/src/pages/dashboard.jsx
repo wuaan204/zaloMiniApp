@@ -183,11 +183,11 @@ export function DashboardClientDetail() {
 
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
-      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28 bg-slate-100">
       {/* Header — matches spacing of clients.jsx & workouts.jsx */}
       <div
-        className="bg-white px-4 md:px-8 pb-3 border-b border-slate-200 sticky top-0 z-30 pr-24"
-        style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
+        className="bg-white px-3 sm:px-4 md:px-8 pb-3 border-b border-slate-200 sticky top-0 z-30 pr-24"
+        style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 36px)" }}
       >
         <div className="flex items-center gap-3">
           <BackButton onClick={() => navigate(-1)} />
@@ -203,7 +203,7 @@ export function DashboardClientDetail() {
       </div>
 
       {/* Scrollable body */}
-      <div className="p-4 md:px-8 pb-28 space-y-4">
+      <div className="p-3 sm:p-4 md:px-8 pb-28 space-y-4">
 
         {/* 3 Summary Pill Boxes — strict grid-cols-3, never wraps */}
         <div className="grid grid-cols-3 gap-2 w-full">
@@ -408,13 +408,13 @@ function DashboardPage() {
   // ----- (4) GIAO DIỆN -----
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
-      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28 bg-slate-100">
       {/* Màn hình Tổng quan chính */}
       <div>
         {/* Header — giữ safe-area để tiêu đề không bị thanh trạng thái che */}
         <div
-          className="bg-white border-b border-gray-200 px-4 md:px-8 pb-3 sticky top-0 z-30 pr-24"
-          style={{ paddingTop: "max(env(safe-area-inset-top, 44px), 44px)" }}
+          className="bg-white border-b border-gray-200 px-3 sm:px-4 md:px-8 pb-3 sticky top-0 z-30 pr-24"
+          style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 36px)" }}
         >
           <div className="flex items-center gap-2">
             <div className="flex-1 min-w-0">
@@ -425,7 +425,7 @@ function DashboardPage() {
         </div>
 
         {/* Nội dung: PC dùng 4 thẻ ngang + lưới 2 cột, mobile giữ 1 cột */}
-        <div className="space-y-6 px-4 md:px-8 pt-4 md:pt-6 pb-28 md:pb-8">
+        <div className="space-y-6 px-3 sm:px-4 md:px-8 pt-4 md:pt-6 pb-28 md:pb-8">
           {/* (1) 4 thẻ thống kê */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
             {dashboardStats.map((stat, index) => (

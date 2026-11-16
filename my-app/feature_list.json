@@ -1,0 +1,61 @@
+{
+  "project": "zalo-mini-app-pt-management",
+  "features": [
+    {
+      "id": "feat-001",
+      "name": "Project Setup & Verification Baseline",
+      "description": "Confirm the project installs dependencies, runs verification (lint/test/build), and starts from a clean checkout.",
+      "dependencies": [],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-002",
+      "name": "Dashboard with Inactive Client Alerts (7–10 days)",
+      "description": "PT sees a dashboard listing clients and a prominent alert if a client has had no sessions in the last 7–10 days.",
+      "dependencies": ["feat-001"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-003",
+      "name": "Client Management (Add, Edit, Delete)",
+      "description": "PT can add a new client, edit client information, and remove a client from the list.",
+      "dependencies": ["feat-001"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-004",
+      "name": "Workout & Session Schedule",
+      "description": "PT can create a workout session for a client and view upcoming sessions in a schedule.",
+      "dependencies": ["feat-003"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-005",
+      "name": "InBody Progress Tracking",
+      "description": "PT can enter InBody metrics for a client and view progress history or a simple chart over time.",
+      "dependencies": ["feat-003"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-006",
+      "name": "Interaction Notes",
+      "description": "PT can add text notes to a client to record conversations or important reminders.",
+      "dependencies": ["feat-003"],
+      "status": "not-started",
+      "evidence": ""
+    },
+    {
+      "id": "feat-007",
+      "name": "Smart Slot Availability & 1-Click Zalo Rescheduling",
+      "description": "PT can check which standard daily slots are free or booked for today and tomorrow, then reschedule a client in one click with a ready-to-paste Zalo confirmation message.",
+      "dependencies": ["feat-004"],
+      "status": "passing",
+      "evidence": "2026-11-16: `./init.sh` exited 0 and `npx zmp build` passed (528 modules). Browser smoke test: the inline \"Đổi lịch nhanh\" panel showed all 7 standard slots for Hôm nay/Ngày mai; rescheduled Trần Thị Bình to Ngày mai 09:00 - 10:00; confirmation banner and Zalo CTA appeared; client Zalo state updated (hasUnreadZalo=false, inactiveDays=0, lastZaloMessage set); the new session survived a reload via sessionStorage; /workouts showed the slot as booked; exactly one scroll container remained."
+    }
+  ]
+}

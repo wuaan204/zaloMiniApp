@@ -1,7 +1,7 @@
 import { Page, Text, Button, Input, Select, useNavigate, Avatar } from "zmp-ui";
 import React, { useState, useEffect, useRef } from "react";
 import { BackButton, SearchIcon } from "../components/icons";
-import { useAppContext, today, tomorrow } from "../context/AppContext";
+import { useAppContext, today, tomorrow, STANDARD_TIME_SLOTS } from "../context/AppContext";
 import { saveScroll, restoreScroll } from "../utils/scroll";
 
 // ============================================
@@ -149,7 +149,7 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
 // ============================================
 export function WorkoutAddView() {
   const navigate = useNavigate();
-  const { addSession } = useAppContext();
+  const { addSession, workoutFormPrefill, setWorkoutFormPrefill } = useAppContext();
   const clients = workoutClients;
 
   // Scroll ref riêng biệt cho màn hình này
@@ -162,16 +162,23 @@ export function WorkoutAddView() {
     }
   }, []);
 
-  // Dữ liệu đang nhập trong form
+  // Dữ liệu đang nhập trong form (nếu mở từ bảng Ca trống thì điền sẵn ngày + giờ)
   const [formData, setFormData] = useState({
     clientId: "",
-    date: today,
-    time: "18:00 - 19:00",
+    date: workoutFormPrefill ? workoutFormPrefill.date : today,
+    time: workoutFormPrefill ? workoutFormPrefill.time : "18:00 - 19:00",
     focus: "Thân trên - Ngực & Tay sau",
     sessionNumber: 1,
     status: "Sắp tới",
     notes: "",
   });
+
+  // Đã dùng xong khung giờ chọn trước -> xóa để lần sau mở form không bị dính
+  useEffect(() => {
+    if (workoutFormPrefill) {
+      setWorkoutFormPrefill(null);
+    }
+  }, []);
 
   // Danh sách lựa chọn cho ô Nội dung tập và Trạng thái
   const focuses = [
@@ -219,11 +226,11 @@ export function WorkoutAddView() {
 
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
-      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-28 space-y-4">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-8 pb-28 space-y-4 bg-slate-100">
       {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
         className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 pr-24"
-        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 36px)' }}
       >
         <BackButton onClick={() => navigate(-1)} />
         <Text.Title size="xLarge" className="font-bold text-gray-900">Thêm buổi tập mới</Text.Title>
@@ -273,13 +280,10 @@ export function WorkoutAddView() {
           </div>
           <div>
             <Text className="text-sm text-gray-500 mb-1 block">Khung giờ <span className="text-red-500">*</span></Text>
-            <Input
-              type="text"
-              value={formData.time}
-              onChange={e => setFormData({...formData, time: e.target.value})}
-              placeholder="18:00 - 19:00"
-              className="w-full"
-            />
+            {/* Chỉ cho chọn trong 7 khung giờ chuẩn để bảng Ca trống / Ca kín luôn chính xác */}
+            <Select value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full">
+              {STANDARD_TIME_SLOTS.map(slot => <option key={slot} value={slot}>{slot}</option>)}
+            </Select>
           </div>
         </div>
 
@@ -410,11 +414,11 @@ export function WorkoutDetailView() {
 
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
-      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-4 md:p-8 pb-28 space-y-4">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-8 pb-28 space-y-4 bg-slate-100">
       {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
       <div
         className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 pr-24"
-        style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+        style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 36px)' }}
       >
         <BackButton onClick={() => navigate(-1)} />
         <div className="flex-1 min-w-0">
@@ -581,8 +585,8 @@ const workoutClients = [
 export default function WorkoutsPage() {
   const navigate = useNavigate();
 
-  // Lấy danh sách buổi tập và các hàm xử lý từ Context dùng chung
-  const { sessions, setSelectedSession, updateSession } = useAppContext();
+  // Lấy danh sách buổi tập + hàm kiểm tra khung giờ từ Context dùng chung
+  const { sessions, setSelectedSession, updateSession, getSlotAvailability, setWorkoutFormPrefill } = useAppContext();
 
   // Scroll ref riêng biệt cho danh sách buổi tập
   const scrollRef = useRef(null);
@@ -592,6 +596,13 @@ export default function WorkoutsPage() {
   // Từ khóa tìm kiếm và tab bộ lọc đang chọn
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+
+  // Bảng kiểm tra ca trống / ca kín: ngày đang xem và trạng thái thu gọn
+  const [slotBoardDay, setSlotBoardDay] = useState("Hôm nay");
+  const [showSlotBoard, setShowSlotBoard] = useState(true);
+
+  // Danh sách 7 khung giờ của ngày đang chọn
+  const slotBoard = getSlotAvailability(slotBoardDay);
 
   // Khi vào trang: khôi phục vị trí cuộn đã lưu (nếu có)
   useEffect(() => {
@@ -658,8 +669,19 @@ export default function WorkoutsPage() {
     navigate("/workout-detail");
   };
 
-  // Bấm nút "+ Thêm buổi": lưu vị trí cuộn rồi chuyển sang trang form thêm buổi tập
+  // Bấm nút "+ Thêm buổi": mở form trống (không điền sẵn khung giờ)
   const handleOpenAdd = () => {
+    setWorkoutFormPrefill(null);
+    saveScroll("scroll_workouts", scrollRef);
+    navigate("/workout-add");
+  };
+
+  // Bấm 1 ca trống: mở form thêm buổi tập với đúng ngày + giờ đã chọn
+  const handleOpenAddFromSlot = (timeSlot) => {
+    setWorkoutFormPrefill({
+      date: slotBoardDay === "Ngày mai" ? tomorrow : today,
+      time: timeSlot,
+    });
     saveScroll("scroll_workouts", scrollRef);
     navigate("/workout-add");
   };
@@ -667,12 +689,12 @@ export default function WorkoutsPage() {
   // ----- (4) GIAO DIỆN -----
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
-      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden">
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28 bg-slate-100">
       <div>
           {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
           <div
-            className="bg-white border-b border-gray-200 px-4 md:px-8 pb-3 sticky top-0 z-30 pr-24"
-            style={{ paddingTop: 'max(env(safe-area-inset-top, 44px), 44px)' }}
+            className="bg-white border-b border-gray-200 px-3 sm:px-4 md:px-8 pb-3 sticky top-0 z-30 pr-24"
+            style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 36px)' }}
           >
             <div className="flex items-center gap-2">
               <BackButton onClick={() => navigate(-1)} />
@@ -684,7 +706,7 @@ export default function WorkoutsPage() {
           </div>
 
           {/* Search & Filter */}
-          <div className="px-4 md:px-8 pt-4 pb-28 space-y-3">
+          <div className="px-3 sm:px-4 md:px-8 pt-4 pb-28 space-y-3">
             {/* Search Input */}
             <div className="flex gap-3">
               <div className="relative flex-1">
@@ -720,11 +742,80 @@ export default function WorkoutsPage() {
               ))}
             </div>
 
+            {/* Bảng kiểm tra nhanh Ca Trống / Ca Kín trong ngày */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3">
+              {/* Thanh tiêu đề: chạm để thu gọn / mở rộng bảng */}
+              <button
+                type="button"
+                onClick={() => setShowSlotBoard(!showSlotBoard)}
+                className="w-full flex items-center justify-between gap-2 text-left"
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold text-slate-900">
+                    Trạng thái Khung giờ PT (Hôm nay &amp; Ngày mai)
+                  </span>
+                  <span className="block text-[11px] text-slate-500 mt-0.5">
+                    Chạm vào ca trống để xếp lịch ngay
+                  </span>
+                </span>
+                <span className="shrink-0 inline-flex items-center justify-center text-center px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-semibold text-slate-600">
+                  {showSlotBoard ? "Thu gọn" : "Mở rộng"}
+                </span>
+              </button>
+
+              {showSlotBoard && (
+                <>
+                  {/* Pills chọn Hôm nay / Ngày mai */}
+                  <div className="flex gap-2 mt-3">
+                    {["Hôm nay", "Ngày mai"].map((day) => (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => setSlotBoardDay(day)}
+                        className={`flex-1 flex items-center justify-center text-center px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                          slotBoardDay === day
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "bg-white text-slate-600 border-slate-300"
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 7 khung giờ: xanh dương = đã kín, xanh lá nét đứt = còn trống */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 mt-2">
+                    {slotBoard.map((slot) =>
+                      slot.isAvailable ? (
+                        <button
+                          key={slot.time}
+                          type="button"
+                          onClick={() => handleOpenAddFromSlot(slot.time)}
+                          className="bg-emerald-50/60 border border-dashed border-emerald-400 text-emerald-800 rounded-lg p-2 text-xs font-semibold flex flex-col items-center justify-center text-center"
+                        >
+                          <span className="font-bold">{slot.time}</span>
+                          <span className="text-[10px] mt-0.5">Ca trống (+ Xếp lịch)</span>
+                        </button>
+                      ) : (
+                        <div
+                          key={slot.time}
+                          className="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-2 text-xs flex flex-col items-center justify-center text-center"
+                        >
+                          <span className="font-bold">{slot.time}</span>
+                          <span className="text-[10px] mt-0.5 line-clamp-2">{slot.bookedBy}</span>
+                        </div>
+                      )
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
             {/* Session List - Grouped by Day */}
             <div className="flex flex-col space-y-6">
               {/* Today */}
               {(groupedSessions.today && groupedSessions.today.length > 0) && (
-                <div className="px-4">
+                <div>
                   <div className="flex items-center gap-2 mb-3">
                     <Text.Title size="medium" className="font-bold text-gray-900">Hôm nay ({groupedSessions.today.length})</Text.Title>
                   </div>
@@ -744,7 +835,7 @@ export default function WorkoutsPage() {
 
               {/* Tomorrow */}
               {(groupedSessions.tomorrow && groupedSessions.tomorrow.length > 0) && (
-                <div className="px-4">
+                <div>
                   <div className="flex items-center gap-2 mb-3">
                     <Text.Title size="medium" className="font-bold text-gray-900">Ngày mai ({groupedSessions.tomorrow.length})</Text.Title>
                   </div>
@@ -764,7 +855,7 @@ export default function WorkoutsPage() {
 
               {/* Past Days */}
               {(groupedSessions.past && groupedSessions.past.length > 0) && (
-                <div className="px-4">
+                <div>
                   <div className="flex items-center gap-2 mb-3">
                     <Text.Title size="medium" className="font-bold text-gray-900">Ngày trước ({groupedSessions.past.length})</Text.Title>
                   </div>
