@@ -1,4 +1,4 @@
-import { Page, Text, Button, Input, Select, useNavigate, Avatar } from "zmp-ui";
+import { Page, Text, Button, useNavigate, Avatar } from "zmp-ui";
 import React, { useState, useEffect, useRef } from "react";
 import { BackButton, SearchIcon } from "../components/icons";
 import { useAppContext, today, tomorrow, STANDARD_TIME_SLOTS } from "../context/AppContext";
@@ -11,12 +11,12 @@ import { saveScroll, restoreScroll } from "../utils/scroll";
 
 // Các hàm hỗ trợ (helpers)
 function formatDateLabel(dateStr) {
-  const date = new Date(dateStr);
-  const todayDate = new Date(today);
-  const tomorrowDate = new Date(tomorrow);
+  if (!dateStr) return "--";
+  if (dateStr === today || dateStr === "Hôm nay") return "Hôm nay";
+  if (dateStr === tomorrow || dateStr === "Ngày mai") return "Ngày mai";
 
-  if (dateStr === today) return "Hôm nay";
-  if (dateStr === tomorrow) return "Ngày mai";
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return dateStr;
 
   return date.toLocaleDateString("vi-VN", { weekday: "short", day: "2-digit", month: "2-digit" });
 }
@@ -48,9 +48,9 @@ function getDatePillStyle() {
   return "bg-teal-50 text-teal-700 border border-teal-200";
 }
 
-function getDayGroup(dateStr) {
-  if (dateStr === today) return "today";
-  if (dateStr === tomorrow) return "tomorrow";
+function getDayGroup(session) {
+  if (session.dateLabel === "Hôm nay" || session.date === today) return "today";
+  if (session.dateLabel === "Ngày mai" || session.date === tomorrow) return "tomorrow";
   return "past";
 }
 
@@ -92,11 +92,11 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
           <div className="grid grid-cols-3 gap-2 w-full mt-3">
             <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${getFocusPillStyle()}`}>
               <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">NỘI DUNG</span>
-              <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{session.focus}</span>
+              <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{session.workoutType || session.focus}</span>
             </div>
             <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${getProgressPillStyle()}`}>
               <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">TIẾN ĐỘ</span>
-              <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{session.sessionNumber}</span>
+              <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{session.progressText || session.sessionNumber}</span>
             </div>
             <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${getDatePillStyle()}`}>
               <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">NGÀY TẬP</span>
@@ -149,8 +149,13 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
 // ============================================
 export function WorkoutAddView() {
   const navigate = useNavigate();
-  const { addSession, workoutFormPrefill, setWorkoutFormPrefill } = useAppContext();
-  const clients = workoutClients;
+  const {
+    clients,
+    addSession,
+    prefillWorkoutSlot,
+    setPrefillWorkoutSlot,
+    getSlotAvailability,
+  } = useAppContext();
 
   // Scroll ref riêng biệt cho màn hình này
   const scrollRef = useRef(null);
@@ -162,65 +167,92 @@ export function WorkoutAddView() {
     }
   }, []);
 
-  // Dữ liệu đang nhập trong form (nếu mở từ bảng Ca trống thì điền sẵn ngày + giờ)
-  const [formData, setFormData] = useState({
-    clientId: "",
-    date: workoutFormPrefill ? workoutFormPrefill.date : today,
-    time: workoutFormPrefill ? workoutFormPrefill.time : "18:00 - 19:00",
-    focus: "Thân trên - Ngực & Tay sau",
-    sessionNumber: 1,
-    status: "Sắp tới",
-    notes: "",
-  });
+  // Học viên đang chọn (mặc định lấy học viên đầu tiên trong CRM)
+  const [selectedClientId, setSelectedClientId] = useState(() =>
+    clients[0] ? String(clients[0].id) : ""
+  );
 
-  // Đã dùng xong khung giờ chọn trước -> xóa để lần sau mở form không bị dính
-  useEffect(() => {
-    if (workoutFormPrefill) {
-      setWorkoutFormPrefill(null);
-    }
-  }, []);
+  // Ngày tập + khung giờ lấy từ ca trống PT vừa bấm
+  const [dateLabel, setDateLabel] = useState(prefillWorkoutSlot?.dateLabel || "Hôm nay");
+  const [timeSlot, setTimeSlot] = useState(prefillWorkoutSlot?.time || STANDARD_TIME_SLOTS[0]);
 
-  // Danh sách lựa chọn cho ô Nội dung tập và Trạng thái
-  const focuses = [
+  // Nội dung buổi tập và ghi chú / bài tập chi tiết
+  const [workoutType, setWorkoutType] = useState("");
+  const [note, setNote] = useState("");
+
+  // Thông báo lỗi nhỏ khi thiếu dữ liệu
+  const [formError, setFormError] = useState("");
+
+  // Gợi ý nội dung buổi tập để PT bấm nhanh, không cần gõ
+  const workoutPresets = [
     "Thân trên - Ngực & Tay sau",
-    "Thân trên - Lưng & Vai",
-    "Thân trên - Vai & Tay trước",
-    "Chân & Mông",
-    "Chân - Squat & Deadlift",
-    "Chân - Lunge & Step up",
-    "Full Body - HIIT",
-    "Cardio & Core",
-    "Cardio - Interval Running",
-    "Core & Mobility",
+    "Thân dưới - Chân & Mông",
+    "Lưng - Xô & Tay trước",
+    "Cardio & Core giảm mỡ",
+    "Full Body tổng hợp",
   ];
 
-  const statuses = ["Sắp tới", "Cần nhắc lịch", "Đã dời lịch"];
-
-  // Mặc định chọn học viên đầu tiên trong danh sách
+  // Nếu danh sách học viên vừa tải xong thì tự chọn học viên đầu tiên
   useEffect(() => {
-    if (clients.length > 0) {
-      setFormData(prev => ({ ...prev, clientId: clients[0].id }));
+    if (!selectedClientId && clients.length > 0) {
+      setSelectedClientId(String(clients[0].id));
     }
   }, [clients]);
 
-  // Bấm "Tạo buổi tập": lưu vào Context rồi quay lại trang trước (hiệu ứng trượt ngược)
+  // Khi PT bấm ca trống ở trang Lịch -> cập nhật lại ngày + giờ trong form
+  useEffect(() => {
+    if (prefillWorkoutSlot) {
+      setDateLabel(prefillWorkoutSlot.dateLabel);
+      setTimeSlot(prefillWorkoutSlot.time);
+    }
+  }, [prefillWorkoutSlot]);
+
+  // 7 khung giờ của ngày đang chọn, kèm trạng thái Còn trống / Đã kín
+  const slots = getSlotAvailability(dateLabel);
+
+  // Đổi ngày: nếu khung giờ đang chọn đã kín thì tự chuyển sang ca trống đầu tiên
+  const handleChangeDay = (day) => {
+    setDateLabel(day);
+    const daySlots = getSlotAvailability(day);
+    const currentSlot = daySlots.find((slot) => slot.time === timeSlot);
+    if (!currentSlot || !currentSlot.isAvailable) {
+      const firstFreeSlot = daySlots.find((slot) => slot.isAvailable);
+      if (firstFreeSlot) setTimeSlot(firstFreeSlot.time);
+    }
+  };
+
+  // Lưu buổi tập: kiểm tra dữ liệu -> addSession -> quay lại trang Lịch
   const handleSubmit = (e) => {
     e.preventDefault();
-    const client = clients.find(c => String(c.id) === String(formData.clientId));
-    if (!client) return;
 
-    const notesArray = formData.notes && formData.notes.trim() ? [{
-      id: Date.now(),
-      time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      text: formData.notes.trim()
-    }] : [];
+    if (!selectedClientId) {
+      setFormError("Vui lòng chọn học viên.");
+      return;
+    }
+    if (!workoutType.trim()) {
+      setFormError("Vui lòng chọn hoặc nhập nội dung buổi tập.");
+      return;
+    }
 
+    // Không cho lưu vào khung giờ đã có người đặt
+    const selectedSlot = slots.find((slot) => slot.time === timeSlot);
+    if (!selectedSlot || !selectedSlot.isAvailable) {
+      setFormError("Khung giờ này đã kín. Vui lòng chọn khung giờ còn trống.");
+      return;
+    }
+
+    setFormError("");
     addSession({
-      ...formData,
-      clientName: client.name,
-      phone: client.phone,
-      notes: notesArray,
+      clientId: selectedClientId,
+      dateLabel: dateLabel,
+      time: timeSlot,
+      workoutType: workoutType.trim(),
+      note: note.trim(),
     });
+
+    // Giữ lại ngày + giờ vừa lưu để bảng Ca trống quay về đúng ngày đó
+    setPrefillWorkoutSlot({ dateLabel: dateLabel, time: timeSlot });
+    sessionStorage.setItem("nav_direction", "back");
     navigate(-1);
   };
 
@@ -237,100 +269,151 @@ export function WorkoutAddView() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Client Select */}
-        <div>
-          <Text className="text-sm text-gray-500 mb-1 block">Học viên <span className="text-red-500">*</span></Text>
-          <Select value={formData.clientId} onChange={e => setFormData({...formData, clientId: e.target.value})} className="w-full">
-            {clients.map(c => (
-              <option key={c.id} value={c.id}>{c.name} - {c.phone}</option>
+        {/* 1) Chọn học viên */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
+          <label className="text-sm font-semibold text-slate-700 block">
+            Học viên <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={selectedClientId}
+            onChange={(e) => setSelectedClientId(e.target.value)}
+            className="w-full h-10 rounded-lg border border-gray-300 bg-white text-gray-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {clients.map((c) => (
+              <option key={c.id} value={String(c.id)}>
+                {c.name} - {c.phone}
+              </option>
             ))}
-          </Select>
+          </select>
         </div>
 
-        {/* Date & Time */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="min-w-0">
-            <Text className="text-sm text-gray-500 mb-1 block">Ngày tập <span className="text-red-500">*</span></Text>
-            {/* Khung bọc chặt: giữ input luôn nằm trong cột, không tràn ra ngoài trên iOS */}
-            <div className="relative w-full overflow-hidden rounded-xl border border-slate-200 bg-white">
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="block w-full max-w-full min-w-0 box-border appearance-none bg-transparent px-3 py-2.5 pr-10 text-sm text-slate-800 focus:outline-none"
-                style={{ WebkitAppearance: 'none', minWidth: 0, width: '100%', colorScheme: 'light' }}
-              />
-              {/* Icon lịch vẽ bằng SVG để iOS luôn hiển thị icon sắc nét */}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+        {/* 2) Chọn ngày tập */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
+          <label className="text-sm font-semibold text-slate-700 block">
+            Ngày tập <span className="text-red-500">*</span>
+          </label>
+          <div className="flex gap-2">
+            {["Hôm nay", "Ngày mai"].map((day) => (
+              <button
+                key={day}
+                type="button"
+                onClick={() => handleChangeDay(day)}
+                className={`flex-1 flex items-center justify-center text-center px-3 py-2 rounded-lg text-sm font-semibold border ${
+                  dateLabel === day
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-white text-slate-600 border-slate-300"
+                }`}
               >
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-            </div>
-          </div>
-          <div>
-            <Text className="text-sm text-gray-500 mb-1 block">Khung giờ <span className="text-red-500">*</span></Text>
-            {/* Chỉ cho chọn trong 7 khung giờ chuẩn để bảng Ca trống / Ca kín luôn chính xác */}
-            <Select value={formData.time} onChange={e => setFormData({...formData, time: e.target.value})} className="w-full">
-              {STANDARD_TIME_SLOTS.map(slot => <option key={slot} value={slot}>{slot}</option>)}
-            </Select>
+                {day}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Focus */}
-        <div>
-          <Text className="text-sm text-gray-500 mb-1 block">Nội dung tập <span className="text-red-500">*</span></Text>
-          <Select value={formData.focus} onChange={e => setFormData({...formData, focus: e.target.value})} className="w-full">
-            {focuses.map(f => <option key={f} value={f}>{f}</option>)}
-          </Select>
+        {/* 3) Chọn khung giờ còn trống */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
+          <label className="text-sm font-semibold text-slate-700 block">
+            Khung giờ <span className="text-red-500">*</span>
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {slots.map((slot) => {
+              const isSelected = slot.time === timeSlot;
+              return (
+                <button
+                  key={slot.time}
+                  type="button"
+                  disabled={!slot.isAvailable}
+                  onClick={() => {
+                    if (slot.isAvailable) setTimeSlot(slot.time);
+                  }}
+                  className={`rounded-lg p-2 text-xs font-semibold flex flex-col items-center justify-center text-center border ${
+                    !slot.isAvailable
+                      ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                      : isSelected
+                        ? "bg-blue-600 border-blue-600 text-white"
+                        : "bg-emerald-50 border-emerald-300 text-emerald-800 active:bg-emerald-100"
+                  }`}
+                >
+                  <span className="font-bold">{slot.time}</span>
+                  <span className="text-[10px] mt-0.5">
+                    {!slot.isAvailable
+                      ? "Đã kín (" + slot.bookedBy + ")"
+                      : isSelected
+                        ? "Đang chọn"
+                        : "Còn trống"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Session Number & Status */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Text className="text-sm text-gray-500 mb-1 block">Số buổi (VD: 9/24) <span className="text-red-500">*</span></Text>
-            <Input
-              type="number"
-              value={formData.sessionNumber}
-              onChange={e => setFormData({...formData, sessionNumber: parseInt(e.target.value) || 1})}
-              min="1"
-              className="w-full"
-            />
+        {/* 4) Chọn nội dung buổi tập: pill gợi ý + ô nhập tự do */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+          <label className="text-sm font-semibold text-slate-700 block">
+            Nội dung buổi tập <span className="text-red-500">*</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {workoutPresets.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setWorkoutType(preset)}
+                className={`flex items-center justify-center text-center px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                  workoutType === preset
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-blue-50 text-blue-700 border-blue-200"
+                }`}
+              >
+                {preset}
+              </button>
+            ))}
           </div>
-          <div>
-            <Text className="text-sm text-gray-500 mb-1 block">Trạng thái</Text>
-            <Select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full">
-              {statuses.map(s => <option key={s} value={s}>{s}</option>)}
-            </Select>
-          </div>
-        </div>
-
-        {/* Notes */}
-        <div>
-          <Text className="text-sm text-gray-500 mb-1 block">Ghi chú</Text>
-          <textarea
-            value={formData.notes}
-            onChange={e => setFormData({...formData, notes: e.target.value})}
-            rows={3}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900"
-            placeholder="Ghi chú thêm về buổi tập..."
+          <input
+            type="text"
+            value={workoutType}
+            onChange={(e) => setWorkoutType(e.target.value)}
+            placeholder="Hoặc nhập nội dung khác..."
+            className="w-full h-10 rounded-lg border border-gray-300 bg-white text-gray-900 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
-        {/* Submit Buttons */}
+        {/* 5) Ghi chú / bài tập chi tiết */}
+        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
+          <label className="text-sm font-semibold text-slate-700 block">
+            Ghi chú / Bài tập chi tiết
+          </label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-white text-gray-900"
+            placeholder="Ví dụ: Khởi động 10 phút, bench press 4x8..."
+          />
+        </div>
+
+        {/* Thông báo lỗi khi thiếu dữ liệu */}
+        {formError && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-xs font-medium rounded-lg p-3 text-center">
+            {formError}
+          </div>
+        )}
+
+        {/* Nút Hủy / Lưu buổi tập */}
         <div className="flex justify-end gap-2 pt-2">
-          <Button className="inline-flex items-center justify-center text-center" variant="outline" type="button" onClick={() => navigate(-1)}>Hủy</Button>
-          <Button className="inline-flex items-center justify-center text-center" variant="primary" type="submit">Tạo buổi tập</Button>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center justify-center text-center h-10 px-4 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-700 active:bg-gray-50"
+          >
+            Hủy
+          </button>
+          <button
+            type="submit"
+            className="inline-flex items-center justify-center text-center h-10 px-4 rounded-lg bg-blue-600 text-sm font-semibold text-white active:bg-blue-700 shadow-sm"
+          >
+            Lưu buổi tập
+          </button>
         </div>
       </form>
       </div>
@@ -343,8 +426,11 @@ export function WorkoutAddView() {
 // ============================================
 export function WorkoutDetailView() {
   const navigate = useNavigate();
-  const { selectedSession: session, updateSession: onUpdateSession } = useAppContext();
-  const clients = workoutClients;
+  const {
+    selectedSession: session,
+    updateSession: onUpdateSession,
+    clients,
+  } = useAppContext();
 
   // Scroll ref riêng biệt cho màn hình này
   const scrollRef = useRef(null);
@@ -375,8 +461,9 @@ export function WorkoutDetailView() {
     );
   }
 
-  const client = clients.find(c => c.id === localSession.clientId) ||
-                 clients.find(c => c.name === localSession.clientName);
+  const client =
+    clients.find((c) => String(c.id) === String(localSession.clientId)) ||
+    clients.find((c) => c.name === localSession.clientName);
 
   const statusStyle = getStatusStyle(localSession.status);
 
@@ -395,7 +482,7 @@ export function WorkoutDetailView() {
       time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       text: editNotes.trim()
     };
-    const updatedNotes = [...localSession.notes, newNote];
+    const updatedNotes = [...(localSession.notes || []), newNote];
     const updated = { ...localSession, notes: updatedNotes };
     setLocalSession(updated);
     onUpdateSession(localSession.id, updated);
@@ -406,7 +493,7 @@ export function WorkoutDetailView() {
 
   // Xóa 1 ghi chú của buổi tập
   const handleDeleteNote = (id) => {
-    const updatedNotes = localSession.notes.filter(n => n.id !== id);
+    const updatedNotes = (localSession.notes || []).filter(n => n.id !== id);
     const updated = {...localSession, notes: updatedNotes};
     setLocalSession(updated);
     onUpdateSession(localSession.id, updated);
@@ -452,11 +539,11 @@ export function WorkoutDetailView() {
         <div className="grid grid-cols-3 gap-2 w-full pt-2">
           <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${getFocusPillStyle()}`}>
             <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">NỘI DUNG</span>
-            <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{localSession.focus}</span>
+            <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{localSession.workoutType || localSession.focus}</span>
           </div>
           <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${getProgressPillStyle()}`}>
             <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">TIẾN ĐỘ</span>
-            <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{localSession.sessionNumber}</span>
+            <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{localSession.progressText || localSession.sessionNumber}</span>
           </div>
           <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${getDatePillStyle()}`}>
             <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">NGÀY TẬP</span>
@@ -464,6 +551,23 @@ export function WorkoutDetailView() {
           </div>
         </div>
       </div>
+
+      {/* Bài tập dự kiến của buổi tập (lấy từ trường exercises) */}
+      {localSession.exercises && localSession.exercises.length > 0 && (
+        <div className="bg-white rounded-xl border border-slate-300 p-4 space-y-2">
+          <Text.Title size="medium" className="font-bold text-gray-900">Bài tập dự kiến</Text.Title>
+          <div className="space-y-1.5">
+            {localSession.exercises.map((exercise, index) => (
+              <div key={index} className="flex items-start gap-2">
+                <span className="shrink-0 w-5 h-5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold flex items-center justify-center text-center">
+                  {index + 1}
+                </span>
+                <Text className="text-sm text-gray-700 leading-snug">{exercise}</Text>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Notes Section */}
       <div className="bg-white rounded-xl border border-slate-300 p-4 space-y-3">
@@ -561,32 +665,20 @@ export function WorkoutDetailView() {
 }
 
 // ============================================
-// Dữ liệu mẫu: danh sách học viên cho ô chọn khi thêm buổi tập
-// (Danh sách buổi tập nằm trong src/context/AppContext.jsx)
-// ============================================
-const workoutClients = [
-  { id: 1, name: "Nguyễn Văn An", phone: "0901 234 567" },
-  { id: 2, name: "Trần Thị Bình", phone: "0912 345 678" },
-  { id: 3, name: "Lê Văn Cường", phone: "0923 456 789" },
-  { id: 4, name: "Phạm Thị Dung", phone: "0934 567 890" },
-  { id: 5, name: "Hoàng Văn Em", phone: "0945 678 901" },
-  { id: 6, name: "Vũ Thị Phượng", phone: "0956 789 012" },
-  { id: 7, name: "Đặng Văn Giang", phone: "0967 890 123" },
-  { id: 8, name: "Bùi Thị Hạnh", phone: "0978 901 234" },
-  { id: 9, name: "Ngô Văn Khải", phone: "0989 012 345" },
-  { id: 10, name: "Dương Thị Lan", phone: "0990 123 456" },
-  { id: 11, name: "Phan Văn Minh", phone: "0901 111 222" },
-  { id: 12, name: "Võ Thị Nga", phone: "0912 222 333" },
-];
-
-// ============================================
 // Trang chính: Lịch & Buổi tập (route "/workouts")
 // ============================================
 export default function WorkoutsPage() {
   const navigate = useNavigate();
 
   // Lấy danh sách buổi tập + hàm kiểm tra khung giờ từ Context dùng chung
-  const { sessions, setSelectedSession, updateSession, getSlotAvailability, setWorkoutFormPrefill } = useAppContext();
+  const {
+    sessions,
+    setSelectedSession,
+    updateSession,
+    getSlotAvailability,
+    prefillWorkoutSlot,
+    setPrefillWorkoutSlot,
+  } = useAppContext();
 
   // Scroll ref riêng biệt cho danh sách buổi tập
   const scrollRef = useRef(null);
@@ -598,16 +690,25 @@ export default function WorkoutsPage() {
   const [activeFilter, setActiveFilter] = useState("all");
 
   // Bảng kiểm tra ca trống / ca kín: ngày đang xem và trạng thái thu gọn
-  const [slotBoardDay, setSlotBoardDay] = useState("Hôm nay");
+  const [selectedMatrixDay, setSelectedMatrixDay] = useState(
+    prefillWorkoutSlot?.dateLabel || "Hôm nay"
+  );
   const [showSlotBoard, setShowSlotBoard] = useState(true);
 
   // Danh sách 7 khung giờ của ngày đang chọn
-  const slotBoard = getSlotAvailability(slotBoardDay);
+  const slotBoard = getSlotAvailability(selectedMatrixDay);
 
   // Khi vào trang: khôi phục vị trí cuộn đã lưu (nếu có)
   useEffect(() => {
     return restoreScroll("scroll_workouts", scrollRef);
   }, []);
+
+  // Sau khi lưu buổi tập, quay lại đúng ngày vừa đặt trên bảng Ca trống
+  useEffect(() => {
+    if (prefillWorkoutSlot && prefillWorkoutSlot.dateLabel) {
+      setSelectedMatrixDay(prefillWorkoutSlot.dateLabel);
+    }
+  }, [prefillWorkoutSlot]);
 
   // ----- Dữ liệu tính toán từ state -----
 
@@ -621,13 +722,17 @@ export default function WorkoutsPage() {
   if (searchQuery.trim()) {
     const q = searchQuery.toLowerCase().trim();
     filteredSessions = filteredSessions.filter(
-      (s) => s.clientName.toLowerCase().includes(q) || s.focus.toLowerCase().includes(q)
+      (s) =>
+        (s.clientName || "").toLowerCase().includes(q) ||
+        (s.workoutType || s.focus || "").toLowerCase().includes(q)
     );
   }
 
   // Lọc theo tab bộ lọc đang chọn
   if (activeFilter === "today") {
-    filteredSessions = filteredSessions.filter((s) => s.date === today);
+    filteredSessions = filteredSessions.filter(
+      (s) => s.date === today || s.dateLabel === "Hôm nay"
+    );
   } else if (activeFilter === "remind") {
     filteredSessions = filteredSessions.filter((s) => s.status === "Cần nhắc lịch");
   } else if (activeFilter === "completed") {
@@ -637,7 +742,7 @@ export default function WorkoutsPage() {
   // Gom các buổi tập theo nhóm ngày: today / tomorrow / past
   const groupedSessions = {};
   filteredSessions.forEach((s) => {
-    const group = getDayGroup(s.date);
+    const group = getDayGroup(s);
     if (!groupedSessions[group]) groupedSessions[group] = [];
     groupedSessions[group].push(s);
   });
@@ -645,7 +750,7 @@ export default function WorkoutsPage() {
   // Các tab bộ lọc kèm số lượng buổi tập của từng tab
   const filters = [
     { key: "all", label: "Tất cả", count: sessions.length },
-    { key: "today", label: "Hôm nay", count: sessions.filter((s) => s.date === today).length },
+    { key: "today", label: "Hôm nay", count: sessions.filter((s) => s.date === today || s.dateLabel === "Hôm nay").length },
     { key: "remind", label: "Cần nhắc lịch", count: sessions.filter((s) => s.status === "Cần nhắc lịch").length },
     { key: "completed", label: "Đã hoàn thành", count: sessions.filter((s) => s.status === "Đã hoàn thành").length },
   ];
@@ -669,20 +774,25 @@ export default function WorkoutsPage() {
     navigate("/workout-detail");
   };
 
-  // Bấm nút "+ Thêm buổi": mở form trống (không điền sẵn khung giờ)
+  // Bấm nút "+ Thêm buổi": mở form với khung giờ chuẩn đầu tiên của Hôm nay
   const handleOpenAdd = () => {
-    setWorkoutFormPrefill(null);
+    setPrefillWorkoutSlot({
+      dateLabel: "Hôm nay",
+      time: STANDARD_TIME_SLOTS[0],
+    });
     saveScroll("scroll_workouts", scrollRef);
+    sessionStorage.setItem("nav_direction", "forward");
     navigate("/workout-add");
   };
 
   // Bấm 1 ca trống: mở form thêm buổi tập với đúng ngày + giờ đã chọn
   const handleOpenAddFromSlot = (timeSlot) => {
-    setWorkoutFormPrefill({
-      date: slotBoardDay === "Ngày mai" ? tomorrow : today,
+    setPrefillWorkoutSlot({
+      dateLabel: selectedMatrixDay,
       time: timeSlot,
     });
     saveScroll("scroll_workouts", scrollRef);
+    sessionStorage.setItem("nav_direction", "forward");
     navigate("/workout-add");
   };
 
@@ -771,9 +881,9 @@ export default function WorkoutsPage() {
                       <button
                         key={day}
                         type="button"
-                        onClick={() => setSlotBoardDay(day)}
+                        onClick={() => setSelectedMatrixDay(day)}
                         className={`flex-1 flex items-center justify-center text-center px-3 py-1.5 rounded-full text-xs font-semibold border ${
-                          slotBoardDay === day
+                          selectedMatrixDay === day
                             ? "bg-blue-600 text-white border-blue-600"
                             : "bg-white text-slate-600 border-slate-300"
                         }`}

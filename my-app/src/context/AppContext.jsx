@@ -615,8 +615,11 @@ export function AppProvider({ children }) {
   const [sessions, setSessions] = useState(loadSessionsFromStorage);
   const [selectedSession, setSelectedSession] = useState(null);
 
-  // Khung giờ được chọn trước từ bảng "Ca trống" để điền sẵn vào form thêm buổi tập
-  const [workoutFormPrefill, setWorkoutFormPrefill] = useState(null);
+  // Lưu khung giờ trống vừa bấm để tự động điền vào form Thêm buổi tập
+  const [prefillWorkoutSlot, setPrefillWorkoutSlot] = useState({
+    dateLabel: "Hôm nay",
+    time: "06:30 - 07:30",
+  });
 
   // Học viên kèm bản ghi InBody và id học viên đang xem ở trang Tiến độ
   const [progressClients, setProgressClients] = useState(initialProgressClients);
@@ -810,29 +813,61 @@ export function AppProvider({ children }) {
 
   // ----- HANDLERS: buổi tập -----
 
-  // Thêm buổi tập mới vào đầu danh sách (luôn bổ sung đủ trường khung giờ)
-  const addSession = (newSession) => {
-    // Ngày tập thật -> nhãn ngày dùng cho bảng kiểm tra ca trống
-    const sessionDate = newSession.date || today;
-    let dateLabel = "Ngày trước";
-    if (sessionDate === today) dateLabel = "Hôm nay";
-    if (sessionDate === tomorrow) dateLabel = "Ngày mai";
+  // Thêm buổi tập mới với đầy đủ trường mà bảng khung giờ và thẻ buổi tập đang dùng
+  const addSession = (newSessionData) => {
+    // Tìm học viên được chọn trong danh sách thật (so sánh String để tránh lệch kiểu)
+    const selectedClient = clients.find(
+      (c) => String(c.id) === String(newSessionData.clientId)
+    );
+    if (!selectedClient) return;
 
-    // Tiến độ buổi tập dạng "Buổi 9/24"
-    const progressText = `Buổi ${newSession.sessionNumber}/24`;
+    // Chỉ nhận 2 nhãn ngày đang dùng trong lịch
+    const dateLabel = newSessionData.dateLabel === "Ngày mai" ? "Ngày mai" : "Hôm nay";
 
-    const sessionToAdd = {
-      ...newSession,
-      id: Date.now(),
-      date: sessionDate,
+    // "date" là ngày thật (YYYY-MM-DD) để sắp xếp lịch đúng;
+    // "dateLabel" chỉ là nhãn hiển thị Hôm nay / Ngày mai
+    const sessionDate =
+      newSessionData.date || (dateLabel === "Ngày mai" ? tomorrow : today);
+
+    // Khung giờ luôn nằm trong 7 khung giờ chuẩn
+    const timeSlot = STANDARD_TIME_SLOTS.includes(newSessionData.time)
+      ? newSessionData.time
+      : STANDARD_TIME_SLOTS[0];
+
+    // Nội dung tập + tiến độ buổi tập dạng "Buổi 9/24"
+    const workoutType = newSessionData.workoutType || "Buổi tập";
+    const progressText =
+      "Buổi " + ((selectedClient.packageUsed || 0) + 1) + "/" + (selectedClient.packageTotal || 24);
+    const now = Date.now();
+
+    // Buổi tập mới: khớp 100% với getSlotAvailability và các trường thẻ buổi tập dùng
+    const createdSession = {
+      id: now,
+      clientId: selectedClient.id,
+      clientName: selectedClient.name,
+      phone: selectedClient.phone,
       dateLabel: dateLabel,
-      workoutType: newSession.workoutType || newSession.focus || "Buổi tập",
-      progressText: newSession.progressText || progressText,
+      date: sessionDate,
+      time: timeSlot,
+      workoutType: workoutType,
+      exercises: newSessionData.exercises || [
+        "Khởi động 10 phút",
+        "Bài tập chính theo giáo án",
+      ],
+      progressText: progressText,
+      status: "Sắp tới",
+      note: newSessionData.note || "",
+      // Giữ 2 trường cũ để Dashboard / màn hình chi tiết cũ không bị trống
+      focus: workoutType,
       sessionNumber: progressText,
-      status: newSession.status || "Sắp tới",
-      notes: newSession.notes || [],
+      // Ghi chú cũng được đưa vào mảng notes để màn hình chi tiết hiển thị ngay
+      notes: newSessionData.note
+        ? [{ id: now + 1, time: "Vừa tạo", text: newSessionData.note }]
+        : [],
     };
-    setSessions([sessionToAdd, ...sessions]);
+
+    // Luôn thêm vào đầu danh sách để bảng khung giờ thấy ngay ca vừa đặt
+    setSessions((prevSessions) => [createdSession, ...prevSessions]);
   };
 
   // Cập nhật 1 buổi tập (cả trong danh sách lẫn buổi tập đang được chọn)
@@ -976,7 +1011,7 @@ export function AppProvider({ children }) {
     selectedInactiveClient, setSelectedInactiveClient,
     sessions, selectedSession, setSelectedSession, addSession, updateSession, deleteSession,
     getSlotAvailability, rescheduleClientSession,
-    workoutFormPrefill, setWorkoutFormPrefill,
+    prefillWorkoutSlot, setPrefillWorkoutSlot,
     progressClients, selectedProgressClientId, setSelectedProgressClientId, addInbodyRecord, deleteInbodyRecord,
   };
 
