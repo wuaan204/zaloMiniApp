@@ -64,6 +64,22 @@
       "dependencies": ["feat-004", "feat-007"],
       "status": "passing",
       "evidence": "2026-11-16: `./init.sh` exited 0 and `npx zmp build` passed (528 modules). Browser smoke test: free slot 09:00 - 10:00 (Hôm nay) opened /workout-add with the slot pre-selected; selected Phạm Thị Dung, clicked preset \"Full Body tổng hợp\", entered a note, saved; /workouts immediately showed the slot booked and a session card (Full Body tổng hợp, Buổi 4/12, Hôm nay); detail view showed exercises + note. Repeated for Ngày mai 06:30 - 07:30 with Hoàng Văn Em; matrix returned to Ngày mai and showed the booking. Empty workoutType triggered validation without adding a session. sessionStorage preserved both sessions after reload; no console errors."
+    },
+    {
+      "id": "feat-009",
+      "name": "Custom Date Picker & Exact-Date Slot Availability",
+      "description": "PT can pick any calendar date beside Hôm nay / Ngày mai in the slot matrix, client reschedule panel, workout-card panel, and add-session form; availability matches the exact date.",
+      "dependencies": ["feat-007", "feat-008"],
+      "status": "passing",
+      "evidence": "2026-11-17: `npx zmp build` passed (528 modules). Browser smoke test: selected 20/11/2026 in the renamed matrix 'Lịch trống & Ca dạy của PT' -> 7 free slots; added a session on 20/11/2026 at 09:00 -> slot became booked and the card appeared under 'Ngày khác'. Selected 15/10/2026 via the calendar -> matched the Hôm nay bookings (06:30 An, 18:00 Cường), proving ISO-date matching. Date input was highlighted with a blue border/ring while a custom date was active."
+    },
+    {
+      "id": "feat-010",
+      "name": "Inline Workout Rescheduling & Instant Tab Navigation",
+      "description": "Each workout card has an inline 'Đổi lịch nhanh' panel with date/time selection and Zalo notification; top-level tab switches have zero animation while drill-down/back views use a 150ms fade-slide.",
+      "dependencies": ["feat-009"],
+      "status": "passing",
+      "evidence": "2026-11-17: `npx zmp build` passed (528 modules). Browser smoke test: on the 20/11/2026 workout card, 'Đổi lịch nhanh' opened the inline panel; moved Phạm Thị Dung from 09:00 to 14:00; banner 'Đã chuyển lịch sang 14:00 - 15:00 (20/11/2026) & copy tin nhắn!' and 'Báo khách qua Zalo' appeared; matrix updated. Completed cards also expose the action. Client panel moved Trần Thị Bình to 01/12/2026 09:00. Tab click set nav_direction=tab and html.nav-instant=true with computed transitionDuration=0s and animationName=none; class removed after 450ms. Drill-down/back computed transitionDuration=0.15s with 32px translateX. No console errors; no scale/bounce hover classes remain."
     }
   ]
 }

@@ -32,6 +32,21 @@ document.body.style.colorScheme = "light";
 // Xoá lựa chọn "Chế độ tối" cũ (nếu trước đây người dùng đã bật)
 localStorage.removeItem("pt_dark_mode");
 
+// ----- ĐIỀU HƯỚNG: HIỆU ỨNG CHUYỂN TRANG -----
+// Tab chính được CSS tắt animation bằng class "nav-instant" trên <html>
+// (xem hàm markTabNavigation trong AppContext.jsx).
+document.documentElement.classList.remove("nav-instant");
+
+// Khi bấm Back của trình duyệt / Zalo, đánh dấu để dùng hiệu ứng trượt ngược
+window.addEventListener("popstate", () => {
+  try {
+    sessionStorage.setItem("nav_direction", "back");
+  } catch (error) {
+    // Trình duyệt chặn storage -> bỏ qua
+  }
+  document.documentElement.classList.remove("nav-instant");
+});
+
 const root = createRoot(document.getElementById("app"));
 root.render(
   React.createElement(AppProvider, null, React.createElement(Layout))

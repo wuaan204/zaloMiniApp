@@ -90,6 +90,15 @@ export default function DesktopSidebar({
     ? "Mở rộng thanh điều hướng"
     : "Thu gọn thanh điều hướng";
 
+  // Bấm tab chính -> đánh dấu để AppShell tắt animation chuyển trang
+  const markTabClick = () => {
+    try {
+      sessionStorage.setItem("nav_direction", "tab");
+    } catch (error) {
+      // Trình duyệt chặn storage -> bỏ qua
+    }
+  };
+
   return (
     <aside
       className={`app-sidebar hidden h-full shrink-0 flex-col overflow-y-auto border-r border-ink-800 bg-ink-950 px-2 pb-4 md:flex md:w-[88px] lg:px-4 ${
@@ -128,7 +137,10 @@ export default function DesktopSidebar({
             item={item}
             active={activeKey === item.id}
             collapsed={collapsed}
-            onClick={() => onNavigate(item.path)}
+            onClick={() => {
+              markTabClick();
+              onNavigate(item.path);
+            }}
           />
         ))}
       </nav>
@@ -146,7 +158,10 @@ export default function DesktopSidebar({
           active={activeKey === ZALO_LINK.id}
           collapsed={collapsed}
           badgeCount={unreadCount}
-          onClick={onOpenZalo}
+          onClick={() => {
+            markTabClick();
+            onOpenZalo();
+          }}
         />
       </div>
 

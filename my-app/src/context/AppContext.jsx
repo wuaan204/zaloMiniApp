@@ -188,6 +188,77 @@ const past1 = "2026-10-12";
 const past2 = "2026-10-10";
 const past3 = "2026-10-08";
 
+// Đổi "2026-11-20" -> "20/11/2026" để lưu vào dateLabel
+export function formatDateInputToDisplay(isoDate) {
+  if (!isoDate) return "";
+  const parts = String(isoDate).split("-");
+  if (parts.length !== 3) return "";
+  const [year, month, day] = parts;
+  if (!year || !month || !day) return "";
+  return `${day}/${month}/${year}`;
+}
+
+// Đổi dateLabel ("Hôm nay", "Ngày mai", "20/11/2026") -> "YYYY-MM-DD" cho input date
+export function formatDisplayDateToInput(dateLabel) {
+  if (!dateLabel) return "";
+  if (dateLabel === "Hôm nay") return today;
+  if (dateLabel === "Ngày mai") return tomorrow;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateLabel)) return dateLabel;
+  if (dateLabel === "Ngày trước") return "";
+
+  const parts = String(dateLabel).split("/");
+  if (parts.length !== 3) return "";
+  const [day, month, year] = parts;
+  if (!day || !month || !year) return "";
+  return `${year}-${month}-${day}`;
+}
+
+// ----- ĐIỀU HƯỚNG: ĐÁNH DẤU HƯỚNG CHUYỂN TRANG -----
+// Tab chính: gắn class "nav-instant" để CSS tắt hoàn toàn animation.
+let navInstantTimer = null;
+
+export function markTabNavigation() {
+  try {
+    sessionStorage.setItem("nav_direction", "tab");
+  } catch (error) {
+    // Trình duyệt chặn storage -> bỏ qua
+  }
+  document.documentElement.classList.add("nav-instant");
+  if (navInstantTimer) clearTimeout(navInstantTimer);
+  navInstantTimer = setTimeout(() => {
+    document.documentElement.classList.remove("nav-instant");
+    navInstantTimer = null;
+  }, 450);
+}
+
+// Trang con (chi tiết / form): dùng fade + trượt nhẹ 150ms
+export function markForwardNavigation() {
+  try {
+    sessionStorage.setItem("nav_direction", "forward");
+  } catch (error) {
+    // Trình duyệt chặn storage -> bỏ qua
+  }
+  document.documentElement.classList.remove("nav-instant");
+  if (navInstantTimer) {
+    clearTimeout(navInstantTimer);
+    navInstantTimer = null;
+  }
+}
+
+// Quay lại: AnimationRoutes tự nhận NavigationType.Pop để trượt ngược
+export function markBackNavigation() {
+  try {
+    sessionStorage.setItem("nav_direction", "back");
+  } catch (error) {
+    // Trình duyệt chặn storage -> bỏ qua
+  }
+  document.documentElement.classList.remove("nav-instant");
+  if (navInstantTimer) {
+    clearTimeout(navInstantTimer);
+    navInstantTimer = null;
+  }
+}
+
 // Mỗi buổi tập có đủ 2 bộ trường:
 // - Trường mới dùng cho bảng khung giờ: clientId, dateLabel, workoutType, progressText
 // - Trường cũ vẫn giữ để các màn hình hiện tại hiển thị: focus, sessionNumber
@@ -821,13 +892,13 @@ export function AppProvider({ children }) {
     );
     if (!selectedClient) return;
 
-    // Chỉ nhận 2 nhãn ngày đang dùng trong lịch
-    const dateLabel = newSessionData.dateLabel === "Ngày mai" ? "Ngày mai" : "Hôm nay";
+    // Nhận "Hôm nay", "Ngày mai" hoặc ngày cụ thể dạng "DD/MM/YYYY"
+    let dateLabel = newSessionData.dateLabel || "Hôm nay";
+    if (!formatDisplayDateToInput(dateLabel)) dateLabel = "Hôm nay";
 
-    // "date" là ngày thật (YYYY-MM-DD) để sắp xếp lịch đúng;
-    // "dateLabel" chỉ là nhãn hiển thị Hôm nay / Ngày mai
+    // "date" là ngày thật (YYYY-MM-DD) để sắp xếp / gom nhóm lịch đúng
     const sessionDate =
-      newSessionData.date || (dateLabel === "Ngày mai" ? tomorrow : today);
+      newSessionData.date || formatDisplayDateToInput(dateLabel) || today;
 
     // Khung giờ luôn nằm trong 7 khung giờ chuẩn
     const timeSlot = STANDARD_TIME_SLOTS.includes(newSessionData.time)
@@ -885,9 +956,15 @@ export function AppProvider({ children }) {
 
   // Hàm kiểm tra trạng thái Trống / Đã kín của từng khung giờ theo ngày
   const getSlotAvailability = (dateLabel = "Hôm nay") => {
+    // Ngày thật tương ứng để "Hôm nay" và "15/10/2026" cùng trỏ về một ngày
+    const isoDate = formatDisplayDateToInput(dateLabel);
+
     return STANDARD_TIME_SLOTS.map((slot) => {
       const bookedSession = sessions.find(
-        (s) => s.dateLabel === dateLabel && s.time === slot && s.status !== "Đã hủy"
+        (s) =>
+          s.time === slot &&
+          s.status !== "Đã hủy" &&
+          (s.dateLabel === dateLabel || (isoDate && s.date === isoDate))
       );
       return {
         time: slot,
@@ -905,14 +982,15 @@ export function AppProvider({ children }) {
     const client = clients.find((c) => String(c.id) === String(clientId));
     if (!client) return "";
 
-    // Nhãn ngày -> ngày thật trong dữ liệu
-    const newDate = newDateLabel === "Ngày mai" ? tomorrow : today;
+    // Nhãn ngày -> ngày thật trong dữ liệu (áp dụng cả ngày cụ thể DD/MM/YYYY)
+    const newDate = formatDisplayDateToInput(newDateLabel) || today;
 
     // Buổi tập sắp tới hiện tại của học viên (nếu có)
     const upcomingSession = sessions.find(
       (s) =>
         String(s.clientId) === String(client.id) &&
-        (s.dateLabel === "Hôm nay" || s.dateLabel === "Ngày mai")
+        s.status !== "Đã hoàn thành" &&
+        s.status !== "Đã dời lịch"
     );
 
     // Có lịch sắp tới -> cập nhật đúng buổi đó; chưa có -> tạo buổi tập mới
@@ -974,6 +1052,61 @@ export function AppProvider({ children }) {
     return confirmationMessage;
   };
 
+  // Đổi lịch trực tiếp 1 buổi tập cụ thể (dùng cho nút "Đổi lịch nhanh" trên thẻ buổi tập)
+  const rescheduleSessionById = (sessionId, newDateLabel, newTimeSlot) => {
+    const sessionToMove = sessions.find((s) => String(s.id) === String(sessionId));
+    if (!sessionToMove) return "";
+
+    // Ngày thật tương ứng với nhãn ngày (Hôm nay / Ngày mai / DD/MM/YYYY)
+    const newDate = formatDisplayDateToInput(newDateLabel) || today;
+
+    // Cập nhật buổi tập trong danh sách
+    const updatedSession = {
+      ...sessionToMove,
+      date: newDate,
+      dateLabel: newDateLabel,
+      time: newTimeSlot,
+      status: "Sắp tới",
+    };
+    setSessions((prevSessions) =>
+      prevSessions.map((s) => (String(s.id) === String(sessionId) ? updatedSession : s))
+    );
+
+    // Nếu buổi tập đang mở ở trang chi tiết thì cập nhật luôn
+    if (selectedSession && String(selectedSession.id) === String(sessionId)) {
+      setSelectedSession(updatedSession);
+    }
+
+    // Cập nhật trạng thái Zalo của học viên tương ứng
+    const client =
+      clients.find((c) => String(c.id) === String(sessionToMove.clientId)) ||
+      clients.find((c) => c.name === sessionToMove.clientName);
+    if (client) {
+      updateClient(client.id, {
+        hasUnreadZalo: false,
+        inactiveDays: 0,
+        lastZaloTime: "Vừa đổi lịch",
+        lastZaloMessage: "Đã chốt đổi lịch sang " + newTimeSlot + " (" + newDateLabel + ")",
+      });
+    }
+
+    // Tin nhắn xác nhận để PT dán vào Zalo
+    const confirmationMessage =
+      "Chào " + sessionToMove.clientName + ", mình đã kiểm tra lịch trống và đổi buổi tập của bạn sang khung giờ " +
+      newTimeSlot + " (" + newDateLabel + ") nhé!";
+
+    // Copy vào clipboard (bọc try/catch để chạy ngoài Zalo vẫn an toàn)
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(confirmationMessage).catch(() => {});
+      }
+    } catch (error) {
+      // Trình duyệt chặn clipboard -> bỏ qua
+    }
+
+    return confirmationMessage;
+  };
+
   // ----- HANDLERS: bản ghi InBody (luôn thao tác trên học viên đang chọn ở trang Tiến độ) -----
 
   // Thêm bản ghi InBody mới vào đầu danh sách của học viên đang chọn
@@ -1010,7 +1143,7 @@ export function AppProvider({ children }) {
     generateBulkClients, resetDefaultClients, simulateIncomingZaloWebhook, contactClientViaZalo,
     selectedInactiveClient, setSelectedInactiveClient,
     sessions, selectedSession, setSelectedSession, addSession, updateSession, deleteSession,
-    getSlotAvailability, rescheduleClientSession,
+    getSlotAvailability, rescheduleClientSession, rescheduleSessionById,
     prefillWorkoutSlot, setPrefillWorkoutSlot,
     progressClients, selectedProgressClientId, setSelectedProgressClientId, addInbodyRecord, deleteInbodyRecord,
   };

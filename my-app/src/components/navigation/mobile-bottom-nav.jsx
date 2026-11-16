@@ -7,6 +7,15 @@ export default function MobileBottomNav({
   onNavigate,
   onOpenZalo,
 }) {
+  // Bấm tab chính -> đánh dấu để AppShell tắt animation chuyển trang
+  const markTabClick = () => {
+    try {
+      sessionStorage.setItem("nav_direction", "tab");
+    } catch (error) {
+      // Trình duyệt chặn storage -> bỏ qua
+    }
+  };
+
   return (
     <nav
       aria-label="Điều hướng chính"
@@ -26,7 +35,11 @@ export default function MobileBottomNav({
             <button
               key={item.id}
               type="button"
-              onClick={() => (isChat ? onOpenZalo() : onNavigate(item.path))}
+              onClick={() => {
+                markTabClick();
+                if (isChat) onOpenZalo();
+                else onNavigate(item.path);
+              }}
               aria-current={active ? "page" : undefined}
               aria-label={accessibleLabel}
               className={`relative flex min-h-[64px] flex-1 flex-col items-center justify-center gap-1 px-1 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset ${

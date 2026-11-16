@@ -13,7 +13,7 @@ import DashboardPage, { DashboardClientDetail } from "../pages/dashboard";
 import ClientsPage, { ClientDetailView, ClientAddView } from "../pages/clients";
 import WorkoutsPage, { WorkoutDetailView, WorkoutAddView } from "../pages/workouts";
 import ProgressPage, { ProgressAddView } from "../pages/progress";
-import { useAppContext } from "../context/AppContext";
+import { useAppContext, markTabNavigation } from "../context/AppContext";
 import { resetScroll } from "../utils/scroll";
 import DesktopSidebar from "./navigation/desktop-sidebar";
 import MobileBottomNav from "./navigation/mobile-bottom-nav";
@@ -64,9 +64,13 @@ function AppShell() {
   const activeFilterForKey =
     location.pathname === "/clients" ? activeClientFilter : null;
 
-  // Chuyển trang chính; bấm "Quản lý học viên" thì trả bộ lọc về Tất cả
+  // Chuyển tab chính; bấm "Quản lý học viên" thì trả bộ lọc về Tất cả
   const goToPage = (path) => {
     if (path === "/clients") setActiveClientFilter("all");
+    if (location.pathname === path) return;
+
+    // Tab chính: đánh dấu để CSS tắt hoàn toàn animation
+    markTabNavigation();
     navigate(path);
   };
 
@@ -74,7 +78,10 @@ function AppShell() {
   const openClientFilter = (filterKey) => {
     setActiveClientFilter(filterKey);
     resetScroll("scroll_clients");
-    if (location.pathname !== "/clients") navigate("/clients");
+    if (location.pathname !== "/clients") {
+      markTabNavigation();
+      navigate("/clients");
+    }
   };
 
   // Mở thẳng hộp thư Zalo: chuyển sang danh sách khách đang chờ trả lời

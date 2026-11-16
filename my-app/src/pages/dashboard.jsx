@@ -1,7 +1,13 @@
 import { Page, Text, Avatar, Button, useNavigate } from "zmp-ui";
 import React, { useEffect, useRef } from "react";
 import { BackButton } from "../components/icons";
-import { useAppContext, today, tomorrow } from "../context/AppContext";
+import {
+  useAppContext,
+  today,
+  tomorrow,
+  markTabNavigation,
+  markForwardNavigation,
+} from "../context/AppContext";
 import { saveScroll, restoreScroll, resetScroll } from "../utils/scroll";
 
 // Icon SVG cho 4 thẻ thống kê
@@ -163,8 +169,9 @@ export function DashboardClientDetail() {
     }
   }, []);
 
-  // Bấm "Xem hồ sơ đầy đủ": chuyển sang trang Học viên
+  // Bấm "Xem hồ sơ đầy đủ": chuyển sang tab Học viên (không animation)
   const handleViewFullProfile = () => {
+    markTabNavigation();
     navigate("/clients");
   };
 
@@ -366,6 +373,7 @@ function DashboardPage() {
     }
     if (path === "/workouts") resetScroll("scroll_workouts");
     if (path === "/progress") resetScroll("scroll_progress");
+    markTabNavigation();
     navigate(path);
   };
 
@@ -374,6 +382,7 @@ function DashboardPage() {
     saveScroll("scroll_dashboard", scrollRef);
     setActiveClientFilter("unread");
     resetScroll("scroll_clients");
+    markTabNavigation();
     navigate("/clients");
   };
 
@@ -382,13 +391,15 @@ function DashboardPage() {
     saveScroll("scroll_dashboard", scrollRef);
     setActiveClientFilter("inactive");
     resetScroll("scroll_clients");
+    markTabNavigation();
     navigate("/clients");
   };
 
-  // Bấm vào 1 học viên cần theo dõi: lưu vào Context rồi chuyển sang trang chi tiết
+  // Bấm vào 1 học viên cần theo dõi: mở trang con với hiệu ứng nhẹ
   const handleOpenDetail = (client) => {
     saveScroll("scroll_dashboard", scrollRef);
     setSelectedInactiveClient(client);
+    markForwardNavigation();
     navigate("/dashboard-client");
   };
 
@@ -461,7 +472,7 @@ function DashboardPage() {
               {/* Mỗi nút dùng nền pastel; khi nhấn chỉ đậm hơn 1 cấp để chữ luôn rõ */}
               <button
                 type="button"
-                className="bg-blue-100 hover:bg-blue-100 focus:bg-blue-100 active:bg-blue-200 text-blue-800 focus:text-blue-800 active:text-blue-900 border border-blue-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
+                className="bg-blue-100 hover:bg-blue-100 focus:bg-blue-100 active:bg-blue-200 text-blue-800 focus:text-blue-800 active:text-blue-900 border border-blue-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm transition-colors duration-150 select-none outline-none"
                 style={{ WebkitTapHighlightColor: "transparent" }}
                 onClick={() => goTo("/clients")}
               >
@@ -469,7 +480,7 @@ function DashboardPage() {
               </button>
               <button
                 type="button"
-                className="bg-indigo-100 hover:bg-indigo-100 focus:bg-indigo-100 active:bg-indigo-200 text-indigo-800 focus:text-indigo-800 active:text-indigo-900 border border-indigo-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
+                className="bg-indigo-100 hover:bg-indigo-100 focus:bg-indigo-100 active:bg-indigo-200 text-indigo-800 focus:text-indigo-800 active:text-indigo-900 border border-indigo-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm transition-colors duration-150 select-none outline-none"
                 style={{ WebkitTapHighlightColor: "transparent" }}
                 onClick={() => goTo("/workouts")}
               >
@@ -477,7 +488,7 @@ function DashboardPage() {
               </button>
               <button
                 type="button"
-                className="bg-emerald-100 hover:bg-emerald-100 focus:bg-emerald-100 active:bg-emerald-200 text-emerald-800 focus:text-emerald-800 active:text-emerald-900 border border-emerald-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
+                className="bg-emerald-100 hover:bg-emerald-100 focus:bg-emerald-100 active:bg-emerald-200 text-emerald-800 focus:text-emerald-800 active:text-emerald-900 border border-emerald-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm transition-colors duration-150 select-none outline-none"
                 style={{ WebkitTapHighlightColor: "transparent" }}
                 onClick={() => goTo("/progress")}
               >
@@ -485,7 +496,7 @@ function DashboardPage() {
               </button>
               <button
                 type="button"
-                className="bg-rose-100 hover:bg-rose-100 focus:bg-rose-100 active:bg-rose-200 text-rose-800 focus:text-rose-800 active:text-rose-900 border border-rose-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm active:scale-[0.98] transition-all duration-150 select-none outline-none"
+                className="bg-rose-100 hover:bg-rose-100 focus:bg-rose-100 active:bg-rose-200 text-rose-800 focus:text-rose-800 active:text-rose-900 border border-rose-200 font-bold flex flex-col items-center justify-center text-center py-3.5 px-3 rounded-xl shadow-sm text-sm transition-colors duration-150 select-none outline-none"
                 style={{ WebkitTapHighlightColor: "transparent" }}
                 onClick={handleScrollToInactive}
               >

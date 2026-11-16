@@ -1,7 +1,12 @@
 import { Page, Text, Button, Avatar, Input, Select, useNavigate } from "zmp-ui";
 import React, { useState, useEffect, useRef } from "react";
 import { BackButton, SearchIcon } from "../components/icons";
-import { useAppContext } from "../context/AppContext";
+import {
+  useAppContext,
+  formatDateInputToDisplay,
+  formatDisplayDateToInput,
+  markForwardNavigation,
+} from "../context/AppContext";
 import { saveScroll, restoreScroll } from "../utils/scroll";
 
 // ============================================
@@ -68,8 +73,13 @@ function ReschedulePanel({ client, onClose }) {
   const currentSession = sessions.find(
     (s) =>
       String(s.clientId) === String(client.id) &&
-      (s.dateLabel === "Hôm nay" || s.dateLabel === "Ngày mai")
+      s.status !== "Đã hoàn thành" &&
+      s.status !== "Đã dời lịch"
   );
+
+  // Ngày cụ thể (không phải 2 pill Hôm nay / Ngày mai) thì highlight ô lịch
+  const isCustomRescheduleDay =
+    selectedRescheduleDay !== "Hôm nay" && selectedRescheduleDay !== "Ngày mai";
 
   // Số điện thoại sạch để mở chat Zalo gửi xác nhận
   const cleanPhone = String(client.phone || "").replace(/\D/g, "");
@@ -103,22 +113,38 @@ function ReschedulePanel({ client, onClose }) {
         )}
       </div>
 
-      {/* Pills chọn ngày Hôm nay / Ngày mai */}
-      <div className="flex gap-2 mb-2">
-        {["Hôm nay", "Ngày mai"].map((day) => (
-          <button
-            key={day}
-            type="button"
-            onClick={() => setSelectedRescheduleDay(day)}
-            className={`flex-1 flex items-center justify-center text-center px-3 py-1.5 rounded-full text-xs font-semibold border ${
-              selectedRescheduleDay === day
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white text-slate-600 border-slate-300"
-            }`}
-          >
-            {day}
-          </button>
-        ))}
+      {/* Pills Hôm nay / Ngày mai + ô chọn ngày cụ thể */}
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <div className="flex gap-2 flex-1 min-w-[180px]">
+          {["Hôm nay", "Ngày mai"].map((day) => (
+            <button
+              key={day}
+              type="button"
+              onClick={() => setSelectedRescheduleDay(day)}
+              className={`flex-1 flex items-center justify-center text-center px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                selectedRescheduleDay === day
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-slate-600 border-slate-300"
+              }`}
+            >
+              {day}
+            </button>
+          ))}
+        </div>
+        <input
+          type="date"
+          value={formatDisplayDateToInput(selectedRescheduleDay)}
+          onChange={(event) => {
+            if (!event.target.value) return;
+            setSelectedRescheduleDay(formatDateInputToDisplay(event.target.value));
+          }}
+          aria-label="Chọn ngày đổi lịch"
+          className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium text-slate-700 bg-white ${
+            isCustomRescheduleDay
+              ? "border-blue-500 ring-2 ring-blue-100"
+              : "border-slate-300"
+          }`}
+        />
       </div>
 
       {/* Lịch hiện tại của học viên */}
@@ -725,12 +751,14 @@ export default function ClientsPage() {
   const handleOpenDetail = (client) => {
     saveScroll("scroll_clients", scrollRef);
     setSelectedClient(client);
+    markForwardNavigation();
     navigate("/client-detail");
   };
 
   // Bấm nút "+ Thêm HV": lưu vị trí cuộn rồi sang form thêm học viên
   const handleOpenAdd = () => {
     saveScroll("scroll_clients", scrollRef);
+    markForwardNavigation();
     navigate("/client-add");
   };
 

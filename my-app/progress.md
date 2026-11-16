@@ -2,22 +2,23 @@
 
 ## Current State
 
-**Last Updated:** 2026-11-16 23:35
+**Last Updated:** 2026-11-17 00:00
 **Session ID:** N/A (OpenCode implementation session)
-**Active Feature:** feat-008 - Add Session from Empty Slot (End-to-End Flow)
+**Active Feature:** feat-010 - Inline Workout Rescheduling & Fast Tab Navigation
 
 ## Status
 
 ### What's Done
 
-- [x] Implemented feat-008: fixed the full "Thêm buổi tập mới" flow from a free slot.
-- [x] Added shared `prefillWorkoutSlot` state in AppContext and exported it through the Provider.
-- [x] Standardized `addSession` to build a session from the real CRM `clients` list with canonical fields (`clientId`, `clientName`, `phone`, `dateLabel`, `date`, `time`, `workoutType`, `exercises`, `progressText`, `status`, `note`).
-- [x] Rewrote `/workout-add` as a fully controlled form: native client `<select>`, day buttons, availability-aware time grid, workout-type preset pills + text input, note textarea, and validation.
-- [x] Free-slot click now saves `nav_direction=forward`, pre-fills the form, and after save (`nav_direction=back`) the matrix returns to the correct day and shows the slot as booked.
-- [x] Removed the duplicate static `workoutClients` list; the form and detail view now use the real `clients` from Context.
-- [x] Session cards/detail now display `workoutType` / `progressText`, with fallbacks to legacy `focus` / `sessionNumber`.
-- [x] `npx zmp build` passed; `./init.sh` passed.
+- [x] Renamed the slot matrix to **"Lịch trống & Ca dạy của PT"**.
+- [x] Added a native date picker beside `Hôm nay` / `Ngày mai` in the workouts matrix, client reschedule panel, workout-card reschedule panel, and `/workout-add` form.
+- [x] Added `formatDateInputToDisplay` / `formatDisplayDateToInput`; `getSlotAvailability` now matches sessions by exact ISO date, so `"Hôm nay"` and `"15/10/2026"` show the same bookings.
+- [x] Added `rescheduleSessionById` and an inline **"Đổi lịch nhanh"** panel on workout cards (including completed sessions) with the 7-slot grid, confirmation banner, and **"Báo khách qua Zalo"**.
+- [x] Added custom-date sessions to a new **"Ngày khác"** group in the workout list.
+- [x] Tab navigation is instant: nav bars set `nav_direction=tab`, AppShell adds `html.nav-instant`, and CSS disables animations.
+- [x] Drill-down / Back transitions are a 150ms fade + 32px slide.
+- [x] Removed `active:scale` from dashboard shortcut buttons; no scale/bounce hover animations remain.
+- [x] `npx zmp build` passed; browser smoke tests passed.
 
 ### What's In Progress
 
@@ -25,46 +26,53 @@
 
 ### What's Next
 
-1. Verify feat-002 / feat-003 / feat-005 / feat-006 manually and record evidence before marking them `passing`.
-2. Add `build` / `lint` scripts to `package.json` if the thesis requires automated verification gates.
-3. Migrate `sessionStorage` to `nativeStorage` from `zmp-sdk` before release.
-4. Consider preventing duplicate sessions for the same client on the same day (currently allowed if the slot is free).
+1. Verify feat-002 / feat-003 / feat-005 / feat-006 manually and record evidence.
+2. Add real `build` / `lint` scripts to `package.json` if the thesis requires automated gates.
+3. Migrate `sessionStorage` to `nativeStorage` from `zmp-sdk`.
+4. Decide whether to restore `CLAUDE.md` or keep `AGENTS.md` as the only rule file.
 
 ## Blockers / Risks
 
-- [ ] `CLAUDE.md` is absent from the working tree (it was deleted before this session). Its last committed content matches the project rules in `AGENTS.md`; `AGENTS.md` remains the source of truth.
-- [ ] `AGENTS.md` requires `nativeStorage` but the app still uses `sessionStorage`. Acceptable for the mock/demo phase only.
+- [ ] `CLAUDE.md` is absent from the working tree; `AGENTS.md` remains the source of truth.
+- [ ] `AGENTS.md` requires `nativeStorage`, but the app still uses `sessionStorage` (mock/demo only).
 - [ ] No lint/test scripts; verification is `npx zmp build` plus browser smoke tests.
-- [ ] `date` is stored as a real ISO date (`2026-10-15`) derived from `dateLabel`. The task example used `"Hôm nay"` as a fallback, but ISO is required for schedule sorting/grouping. Keep this convention.
-- [ ] The top "+ Thêm buổi" pre-fills `STANDARD_TIME_SLOTS[0]` as requested; that slot may already be booked, in which case the form shows "Đã kín" and submit validation asks the PT to choose a free slot.
+- [ ] Custom dates store `dateLabel` as `DD/MM/YYYY` and `date` as `YYYY-MM-DD`; always keep both in sync via the exported helpers.
+- [ ] Completed sessions can now be moved via "Đổi lịch nhanh"; this intentionally sets status back to "Sắp tới".
 
 ## Decisions Made
 
-- **Real ISO date + display label**: `date` is ISO for sorting/grouping; `dateLabel` is `"Hôm nay"` / `"Ngày mai"` for the UI and `getSlotAvailability`.
-- **Backward-compatible session fields**: new sessions also carry `focus`, `sessionNumber`, and `notes` so Dashboard and the existing detail screen do not break.
-- **Context clients only**: removed the static `workoutClients` list so newly added / bulk clients appear in the add-session form.
-- **Native controlled inputs**: used native `<select>`, `<input>`, and `<textarea>` to avoid ZaUI controlled-component quirks during the thesis demo.
+- **ISO-date matching for availability**: `getSlotAvailability` matches either the exact `dateLabel` or the derived ISO `date`, so relative labels and calendar dates agree.
+- **CSS `nav-instant` class on `<html>`**: does not import ZaUI's internal `AnimationRouterContext`; it is simpler and keeps the code beginner-friendly. The class is removed after 450ms.
+- **150ms transform + opacity transitions**: subtle and fast for drill-down/back navigation.
+- **Reschedule button on every workout card**: including completed sessions, so the PT can correct any schedule.
+- **Date input next to quick pills**: highlighted with a blue border/ring when a specific calendar date is active.
 
 ## Files Modified This Session
 
-- `src/context/AppContext.jsx` - prefill state, standardized `addSession`, context exports
-- `src/pages/workouts.jsx` - free-slot navigation, controlled add form, canonical card fields, detail exercises, removed static clients
+- `src/context/AppContext.jsx` - date helpers, ISO availability, `rescheduleSessionById`, navigation markers
+- `src/pages/workouts.jsx` - matrix title/date picker, inline workout reschedule panel, "Ngày khác" group, forward/back markers
+- `src/pages/clients.jsx` - date picker in the client reschedule panel, custom-date support
+- `src/pages/dashboard.jsx` - tab/forward navigation markers, removed scale animation
+- `src/pages/progress.jsx` - forward navigation marker
+- `src/app.js` - popstate/back marker and initial navigation class reset
+- `src/css/app.scss` - instant tab rules and 150ms drill-down transitions
+- `src/components/layout.jsx` - tab navigation markers
+- `src/components/navigation/desktop-sidebar.jsx` - tab click marker
+- `src/components/navigation/mobile-bottom-nav.jsx` - tab click marker
 
 ## Evidence of Completion
 
-- [x] `npx zmp build` passed: 528 modules, built in ~10s (`www/assets/index.BSCMufyr.module.js`).
-- [x] `./init.sh` exited `0`.
-- [x] Browser smoke test (production build):
-  - Clicked free slot `09:00 - 10:00` (Hôm nay) -> `/workout-add` opened with that slot selected.
-  - Client select showed the 5 context clients; selected `Phạm Thị Dung`.
-  - Clicked preset `Full Body tổng hợp` -> text input filled immediately.
-  - Entered a note and clicked `Lưu buổi tập`.
-  - Returned to `/workouts`; matrix showed `09:00 - 10:00` booked by Phạm Thị Dung; session card showed `Full Body tổng hợp`, `Buổi 4/12`, `Hôm nay`.
-  - Opened the new card: detail view showed the default exercises and the note.
-  - Repeated with `Ngày mai` / `06:30 - 07:30`: form switched days, matrix returned to `Ngày mai`, slot showed `Hoàng Văn Em`.
-  - Clicked `Lưu buổi tập` with no workout type: validation message appeared and no session was added.
-  - `sessionStorage` contained both new sessions; reload preserved them; no console errors.
+- [x] `npx zmp build` passed: 528 modules, built in ~6s (`www/assets/index.MjZjmxKf.module.js`).
+- [x] Browser smoke tests (production build):
+  - Matrix title is `Lịch trống & Ca dạy của PT`; date picker `20/11/2026` shows 7 free slots; adding a session marks the slot booked and puts the card under `Ngày khác (1)`.
+  - Date picker `15/10/2026` matches `Hôm nay` bookings (`06:30` An, `18:00` Cường).
+  - Workout card on `20/11/2026`: inline `Đổi lịch nhanh` moved Dung from `09:00` to `14:00`; notice + `Báo khách qua Zalo` appeared; matrix updated.
+  - Client panel: custom `01/12/2026` moved Bình to `09:00` on `01/12/2026`.
+  - Completed card exposes `Đổi lịch nhanh` and opens the inline panel.
+  - Tab switch: `nav_direction=tab`, `html.nav-instant=true`, computed `transitionDuration=0s`, `animationName=none`; class removed after 450ms.
+  - Drill-down: `0.15s` transition, `translateX(32px) -> 0`; Back: `0.15s`, `translateX(-32px) -> 0`.
+  - No console errors; no remaining `active:scale` / `hover:scale` / `animate-bounce` classes.
 
 ## Notes for Next Session
 
-`prefillWorkoutSlot` is the single source of truth for the add form's day/time. `addSession` derives the ISO date from `dateLabel`; keep times inside `STANDARD_TIME_SLOTS`. Decide whether to restore `CLAUDE.md` or keep `AGENTS.md` as the only rule file.
+`getSlotAvailability` is the single source of truth for free/booked slots. Keep `dateLabel` (`Hôm nay`, `Ngày mai`, `DD/MM/YYYY`) and `date` (`YYYY-MM-DD`) in sync. Tab navigation must always call `markTabNavigation()` before navigating; drill-down must call `markForwardNavigation()`, and form save/back should call `markBackNavigation()`.

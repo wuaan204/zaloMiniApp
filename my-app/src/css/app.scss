@@ -43,8 +43,10 @@ html, body, #app {
 
 /* Tôn trọng cài đặt giảm chuyển động của hệ điều hành */
 @media (prefers-reduced-motion: reduce) {
-  .slide-overlay {
+  .slide-overlay,
+  .zaui-routes-item {
     transition: none !important;
+    animation: none !important;
   }
 }
 
@@ -438,4 +440,97 @@ body,
   max-width: 100% !important;
   margin: 0 !important;
   padding: 0 !important;
+}
+
+/* ============================================
+   PHASE 3 — ĐIỀU HƯỚNG NHANH
+   ============================================
+   - Tab chính (Tổng quan, Học viên, Lịch tập, InBody):
+     gắn class "nav-instant" trên <html> để tắt sạch animation.
+   - Trang con (chi tiết / form): fade + trượt nhẹ 150ms.
+   ============================================ */
+
+/* --- 1) Tab chính: không animation, đổi trang tức thì --- */
+html.nav-instant .zaui-routes-item,
+html.nav-instant .zaui-routes-item.zaui-routes-forward-enter,
+html.nav-instant .zaui-routes-item.zaui-routes-forward-enter-active,
+html.nav-instant .zaui-routes-item.zaui-routes-backward-enter,
+html.nav-instant .zaui-routes-item.zaui-routes-backward-enter-active,
+html.nav-instant .zaui-routes-item.zaui-routes-no-animation-enter,
+html.nav-instant .zaui-routes-item.zaui-routes-no-animation-enter-active {
+  animation: none !important;
+  transition: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+/* Ẩn ngay trang cũ để tab mới hiện ra lập tức */
+html.nav-instant .zaui-routes-item.zaui-routes-forward-exit,
+html.nav-instant .zaui-routes-item.zaui-routes-forward-exit-active,
+html.nav-instant .zaui-routes-item.zaui-routes-backward-exit,
+html.nav-instant .zaui-routes-item.zaui-routes-backward-exit-active,
+html.nav-instant .zaui-routes-item.zaui-routes-no-animation-exit,
+html.nav-instant .zaui-routes-item.zaui-routes-no-animation-exit-active {
+  display: none !important;
+}
+
+/* --- 2) Trang con: fade + trượt nhẹ 150ms --- */
+.zaui-routes .zaui-routes-item:not(:only-child).zaui-routes-forward-enter-active,
+.zaui-routes .zaui-routes-item:not(:only-child).zaui-routes-forward-exit-active,
+.zaui-routes .zaui-routes-item:not(:only-child).zaui-routes-backward-enter-active,
+.zaui-routes .zaui-routes-item:not(:only-child).zaui-routes-backward-exit-active,
+.zaui-routes .zaui-routes-item:not(:only-child).zaui-routes-no-animation-enter-active,
+.zaui-routes .zaui-routes-item:not(:only-child).zaui-routes-no-animation-exit-active {
+  transition: transform 150ms ease, opacity 150ms ease !important;
+}
+
+.zaui-routes-forward-enter {
+  transform: translateX(32px) !important;
+  opacity: 0 !important;
+}
+.zaui-routes-forward-enter-active {
+  transform: translateX(0) !important;
+  opacity: 1 !important;
+}
+.zaui-routes-forward-exit {
+  transform: translateX(0) !important;
+  opacity: 1 !important;
+}
+.zaui-routes-forward-exit-active {
+  transform: translateX(-20px) !important;
+  opacity: 0 !important;
+}
+
+.zaui-routes-backward-enter {
+  transform: translateX(-32px) !important;
+  opacity: 0 !important;
+}
+.zaui-routes-backward-enter-active {
+  transform: translateX(0) !important;
+  opacity: 1 !important;
+}
+.zaui-routes-backward-exit {
+  transform: translateX(0) !important;
+  opacity: 1 !important;
+}
+.zaui-routes-backward-exit-active {
+  transform: translateX(20px) !important;
+  opacity: 0 !important;
+}
+
+.zaui-routes-no-animation-enter {
+  transform: none !important;
+  opacity: 0 !important;
+}
+.zaui-routes-no-animation-enter-active {
+  transform: none !important;
+  opacity: 1 !important;
+}
+.zaui-routes-no-animation-exit {
+  transform: none !important;
+  opacity: 1 !important;
+}
+.zaui-routes-no-animation-exit-active {
+  transform: none !important;
+  opacity: 0 !important;
 }

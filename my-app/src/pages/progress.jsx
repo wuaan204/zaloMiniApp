@@ -1,7 +1,7 @@
 import { Page, useNavigate } from "zmp-ui";
 import React, { useState, useEffect, useRef } from "react";
 import { BackButton } from "../components/icons";
-import { useAppContext } from "../context/AppContext";
+import { useAppContext, markForwardNavigation } from "../context/AppContext";
 import { saveScroll, restoreScroll } from "../utils/scroll";
 
 // ============================================
@@ -866,6 +866,7 @@ export default function ProgressPage() {
   // Bấm nút "+": lưu vị trí cuộn rồi chuyển sang trang form thêm bản ghi InBody
   const handleOpenAdd = () => {
     saveScroll("scroll_progress", scrollRef);
+    markForwardNavigation();
     navigate("/progress-add");
   };
 

@@ -1,7 +1,16 @@
 import { Page, Text, Button, useNavigate, Avatar } from "zmp-ui";
 import React, { useState, useEffect, useRef } from "react";
 import { BackButton, SearchIcon } from "../components/icons";
-import { useAppContext, today, tomorrow, STANDARD_TIME_SLOTS } from "../context/AppContext";
+import {
+  useAppContext,
+  today,
+  tomorrow,
+  STANDARD_TIME_SLOTS,
+  formatDateInputToDisplay,
+  formatDisplayDateToInput,
+  markForwardNavigation,
+  markBackNavigation,
+} from "../context/AppContext";
 import { saveScroll, restoreScroll } from "../utils/scroll";
 
 // ============================================
@@ -51,16 +60,164 @@ function getDatePillStyle() {
 function getDayGroup(session) {
   if (session.dateLabel === "Hôm nay" || session.date === today) return "today";
   if (session.dateLabel === "Ngày mai" || session.date === tomorrow) return "tomorrow";
-  return "past";
+
+  // Ngày cụ thể: so sánh với hôm nay để tách "Ngày trước" và "Ngày khác"
+  const isoDate = formatDisplayDateToInput(session.dateLabel) || session.date;
+  if (isoDate && isoDate < today) return "past";
+  return "other";
+}
+
+// ============================================
+// Panel "Đổi lịch nhanh" ngay trong thẻ buổi tập
+// ============================================
+function RescheduleWorkoutPanel({ session, onClose }) {
+  const { getSlotAvailability, rescheduleSessionById } = useAppContext();
+
+  // Ngày đang chọn trong panel (mặc định theo ngày hiện tại của buổi tập)
+  const [selectedDay, setSelectedDay] = useState(
+    session.dateLabel && session.dateLabel !== "Ngày trước"
+      ? session.dateLabel
+      : "Hôm nay"
+  );
+
+  // Thông báo sau khi chuyển lịch thành công
+  const [notice, setNotice] = useState(null);
+
+  // 7 khung giờ của ngày đang chọn
+  const slots = getSlotAvailability(selectedDay);
+
+  // Ngày cụ thể (không phải 2 pill Hôm nay / Ngày mai) thì highlight ô lịch
+  const isCustomDay = selectedDay !== "Hôm nay" && selectedDay !== "Ngày mai";
+
+  // Số điện thoại sạch để mở Zalo báo khách
+  const cleanPhone = String(session.phone || "").replace(/\D/g, "");
+
+  // Bấm 1 ca trống: đổi lịch đúng buổi tập này
+  const handlePickSlot = (slot) => {
+    const message = rescheduleSessionById(session.id, selectedDay, slot.time);
+    if (!message) return;
+    setNotice({ time: slot.time, day: selectedDay, message: message });
+  };
+
+  return (
+    <div
+      className="border-t border-slate-200 bg-slate-50 p-3 mt-3 rounded-b-xl"
+      onClick={(event) => event.stopPropagation()}
+    >
+      {/* Tiêu đề panel + nút đóng */}
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p className="text-xs font-bold text-slate-800 leading-snug">
+          Đổi lịch cho {session.clientName}
+        </p>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="shrink-0 px-2 py-0.5 rounded-md bg-white border border-slate-300 text-slate-600 text-[11px] font-semibold flex items-center justify-center text-center"
+          >
+            Đóng
+          </button>
+        )}
+      </div>
+
+      {/* Lịch hiện tại */}
+      <p className="text-[11px] text-slate-500 mb-2">
+        Lịch hiện tại: {session.dateLabel} | {session.time}
+      </p>
+
+      {/* Pills Hôm nay / Ngày mai + ô chọn ngày cụ thể */}
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <div className="flex gap-2 flex-1 min-w-[180px]">
+          {["Hôm nay", "Ngày mai"].map((day) => (
+            <button
+              key={day}
+              type="button"
+              onClick={() => setSelectedDay(day)}
+              className={`flex-1 flex items-center justify-center text-center px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                selectedDay === day
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-slate-600 border-slate-300"
+              }`}
+            >
+              {day}
+            </button>
+          ))}
+        </div>
+        <input
+          type="date"
+          value={formatDisplayDateToInput(selectedDay)}
+          onChange={(event) => {
+            if (!event.target.value) return;
+            setSelectedDay(formatDateInputToDisplay(event.target.value));
+          }}
+          aria-label="Chọn ngày đổi lịch"
+          className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium text-slate-700 bg-white ${
+            isCustomDay
+              ? "border-blue-500 ring-2 ring-blue-100"
+              : "border-slate-300"
+          }`}
+        />
+      </div>
+
+      {/* Lưới khung giờ: xanh = trống, xám = đã kín */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {slots.map((slot) =>
+          slot.isAvailable ? (
+            <button
+              key={slot.time}
+              type="button"
+              onClick={() => handlePickSlot(slot)}
+              className="bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 border border-emerald-300 text-emerald-800 rounded-lg p-2 text-xs font-semibold flex flex-col items-center justify-center text-center"
+            >
+              <span className="font-bold">{slot.time}</span>
+              <span className="text-[10px] mt-0.5">Còn trống - Chạm để chốt</span>
+            </button>
+          ) : (
+            <div
+              key={slot.time}
+              className="bg-slate-100 border border-slate-200 text-slate-400 rounded-lg p-2 text-xs flex flex-col items-center justify-center text-center cursor-not-allowed"
+            >
+              <span className="font-bold">{slot.time}</span>
+              <span className="text-[10px] mt-0.5">Đã kín ({slot.bookedBy})</span>
+            </div>
+          )
+        )}
+      </div>
+
+      {/* Banner xác nhận + nút báo khách qua Zalo */}
+      {notice && (
+        <div className="mt-3 bg-emerald-50 border border-emerald-300 rounded-lg p-2.5">
+          <p className="text-[11px] font-semibold text-emerald-800 text-center">
+            Đã chuyển lịch sang {notice.time} ({notice.day}) &amp; copy tin nhắn!
+          </p>
+          <p className="text-[11px] text-emerald-700 mt-1 leading-snug">{notice.message}</p>
+          <a
+            href={"https://zalo.me/" + cleanPhone}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 w-full py-2 px-3 rounded-lg bg-blue-600 active:bg-blue-700 text-white text-xs font-semibold flex items-center justify-center text-center no-underline"
+          >
+            Báo khách qua Zalo
+          </a>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ============================================
 // Session Card Component
 // ============================================
-function SessionCard({ session, onClick, onComplete, onRemindDone }) {
+function SessionCard({
+  session,
+  onClick,
+  onComplete,
+  onRemindDone,
+  isRescheduling,
+  onToggleReschedule,
+}) {
   const statusStyle = getStatusStyle(session.status);
   const isUpcoming = session.status === "Sắp tới" || session.status === "Cần nhắc lịch";
-  const showActions = isUpcoming && (session.status === "Sắp tới" || session.status === "Cần nhắc lịch");
 
   return (
     <div
@@ -104,31 +261,37 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
             </div>
           </div>
 
-          {/* Quick Action Buttons */}
-          {showActions && (
-            <div className="flex flex-wrap justify-end gap-2 mt-3">
-              {session.status === "Sắp tới" && (
-                <Button
-                  variant="primary"
-                  size="small"
-                  className="inline-flex items-center justify-center text-center w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
-                  onClick={(e) => { e.stopPropagation(); onComplete(session.id); }}
-                >
-                  Hoàn thành
-                </Button>
-              )}
-              {(session.status === "Cần nhắc lịch" || session.status === "Sắp tới") && (
-                <Button
-                  variant="outline"
-                  size="small"
-                  className="inline-flex items-center justify-center text-center w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
-                  onClick={(e) => { e.stopPropagation(); onRemindDone(session.id); }}
-                >
-                  Đã nhắc lịch
-                </Button>
-              )}
-            </div>
-          )}
+          {/* Quick Action Buttons: luôn có Đổi lịch nhanh, kể cả buổi đã hoàn thành */}
+          <div className="flex flex-wrap justify-end gap-2 mt-3">
+            {session.status === "Sắp tới" && (
+              <Button
+                variant="primary"
+                size="small"
+                className="inline-flex items-center justify-center text-center w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
+                onClick={(e) => { e.stopPropagation(); onComplete(session.id); }}
+              >
+                Hoàn thành
+              </Button>
+            )}
+            {(session.status === "Cần nhắc lịch" || session.status === "Sắp tới") && (
+              <Button
+                variant="outline"
+                size="small"
+                className="inline-flex items-center justify-center text-center w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
+                onClick={(e) => { e.stopPropagation(); onRemindDone(session.id); }}
+              >
+                Đã nhắc lịch
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="small"
+              className="inline-flex items-center justify-center text-center w-auto px-4 py-1.5 text-xs font-medium rounded-lg"
+              onClick={(e) => { e.stopPropagation(); onToggleReschedule(session.id); }}
+            >
+              Đổi lịch nhanh
+            </Button>
+          </div>
 
           {/* Notes preview for completed/rescheduled */}
           {!isUpcoming && session.notes && session.notes.length > 0 && (
@@ -140,6 +303,14 @@ function SessionCard({ session, onClick, onComplete, onRemindDone }) {
           )}
         </div>
       </div>
+
+      {/* Panel đổi lịch mở ngay trong thẻ buổi tập */}
+      {isRescheduling && (
+        <RescheduleWorkoutPanel
+          session={session}
+          onClose={() => onToggleReschedule(session.id)}
+        />
+      )}
     </div>
   );
 }
@@ -210,6 +381,9 @@ export function WorkoutAddView() {
   // 7 khung giờ của ngày đang chọn, kèm trạng thái Còn trống / Đã kín
   const slots = getSlotAvailability(dateLabel);
 
+  // Ngày cụ thể (không phải 2 pill Hôm nay / Ngày mai) thì highlight ô lịch
+  const isCustomDateLabel = dateLabel !== "Hôm nay" && dateLabel !== "Ngày mai";
+
   // Đổi ngày: nếu khung giờ đang chọn đã kín thì tự chuyển sang ca trống đầu tiên
   const handleChangeDay = (day) => {
     setDateLabel(day);
@@ -252,7 +426,7 @@ export function WorkoutAddView() {
 
     // Giữ lại ngày + giờ vừa lưu để bảng Ca trống quay về đúng ngày đó
     setPrefillWorkoutSlot({ dateLabel: dateLabel, time: timeSlot });
-    sessionStorage.setItem("nav_direction", "back");
+    markBackNavigation();
     navigate(-1);
   };
 
@@ -292,21 +466,37 @@ export function WorkoutAddView() {
           <label className="text-sm font-semibold text-slate-700 block">
             Ngày tập <span className="text-red-500">*</span>
           </label>
-          <div className="flex gap-2">
-            {["Hôm nay", "Ngày mai"].map((day) => (
-              <button
-                key={day}
-                type="button"
-                onClick={() => handleChangeDay(day)}
-                className={`flex-1 flex items-center justify-center text-center px-3 py-2 rounded-lg text-sm font-semibold border ${
-                  dateLabel === day
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-slate-600 border-slate-300"
-                }`}
-              >
-                {day}
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex gap-2 flex-1 min-w-[180px]">
+              {["Hôm nay", "Ngày mai"].map((day) => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => handleChangeDay(day)}
+                  className={`flex-1 flex items-center justify-center text-center px-3 py-2 rounded-lg text-sm font-semibold border ${
+                    dateLabel === day
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-white text-slate-600 border-slate-300"
+                  }`}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+            <input
+              type="date"
+              value={formatDisplayDateToInput(dateLabel)}
+              onChange={(e) => {
+                if (!e.target.value) return;
+                handleChangeDay(formatDateInputToDisplay(e.target.value));
+              }}
+              aria-label="Chọn ngày tập cụ thể"
+              className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium text-slate-700 bg-white ${
+                isCustomDateLabel
+                  ? "border-blue-500 ring-2 ring-blue-100"
+                  : "border-slate-300"
+              }`}
+            />
           </div>
         </div>
 
@@ -689,6 +879,9 @@ export default function WorkoutsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
 
+  // Buổi tập đang mở panel "Đổi lịch nhanh" (null = không mở)
+  const [reschedulingSessionId, setReschedulingSessionId] = useState(null);
+
   // Bảng kiểm tra ca trống / ca kín: ngày đang xem và trạng thái thu gọn
   const [selectedMatrixDay, setSelectedMatrixDay] = useState(
     prefillWorkoutSlot?.dateLabel || "Hôm nay"
@@ -697,6 +890,10 @@ export default function WorkoutsPage() {
 
   // Danh sách 7 khung giờ của ngày đang chọn
   const slotBoard = getSlotAvailability(selectedMatrixDay);
+
+  // Ngày cụ thể (không phải 2 pill Hôm nay / Ngày mai) thì highlight ô lịch
+  const isCustomMatrixDay =
+    selectedMatrixDay !== "Hôm nay" && selectedMatrixDay !== "Ngày mai";
 
   // Khi vào trang: khôi phục vị trí cuộn đã lưu (nếu có)
   useEffect(() => {
@@ -771,6 +968,7 @@ export default function WorkoutsPage() {
   const handleOpenDetail = (session) => {
     saveScroll("scroll_workouts", scrollRef);
     setSelectedSession(session);
+    markForwardNavigation();
     navigate("/workout-detail");
   };
 
@@ -781,7 +979,7 @@ export default function WorkoutsPage() {
       time: STANDARD_TIME_SLOTS[0],
     });
     saveScroll("scroll_workouts", scrollRef);
-    sessionStorage.setItem("nav_direction", "forward");
+    markForwardNavigation();
     navigate("/workout-add");
   };
 
@@ -792,8 +990,21 @@ export default function WorkoutsPage() {
       time: timeSlot,
     });
     saveScroll("scroll_workouts", scrollRef);
-    sessionStorage.setItem("nav_direction", "forward");
+    markForwardNavigation();
     navigate("/workout-add");
+  };
+
+  // Chọn ngày cụ thể từ ô lịch -> đổi sang nhãn DD/MM/YYYY
+  const handleMatrixDateChange = (event) => {
+    if (!event.target.value) return;
+    setSelectedMatrixDay(formatDateInputToDisplay(event.target.value));
+  };
+
+  // Bật/tắt panel đổi lịch của đúng buổi tập vừa chạm
+  const handleToggleReschedule = (sessionId) => {
+    setReschedulingSessionId((currentId) =>
+      String(currentId) === String(sessionId) ? null : sessionId
+    );
   };
 
   // ----- (4) GIAO DIỆN -----
@@ -862,7 +1073,7 @@ export default function WorkoutsPage() {
               >
                 <span className="min-w-0">
                   <span className="block text-sm font-bold text-slate-900">
-                    Trạng thái Khung giờ PT (Hôm nay &amp; Ngày mai)
+                    Lịch trống &amp; Ca dạy của PT
                   </span>
                   <span className="block text-[11px] text-slate-500 mt-0.5">
                     Chạm vào ca trống để xếp lịch ngay
@@ -875,22 +1086,35 @@ export default function WorkoutsPage() {
 
               {showSlotBoard && (
                 <>
-                  {/* Pills chọn Hôm nay / Ngày mai */}
-                  <div className="flex gap-2 mt-3">
-                    {["Hôm nay", "Ngày mai"].map((day) => (
-                      <button
-                        key={day}
-                        type="button"
-                        onClick={() => setSelectedMatrixDay(day)}
-                        className={`flex-1 flex items-center justify-center text-center px-3 py-1.5 rounded-full text-xs font-semibold border ${
-                          selectedMatrixDay === day
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-slate-600 border-slate-300"
-                        }`}
-                      >
-                        {day}
-                      </button>
-                    ))}
+                  {/* Pills Hôm nay / Ngày mai + ô chọn ngày cụ thể */}
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    <div className="flex gap-2 flex-1 min-w-[180px]">
+                      {["Hôm nay", "Ngày mai"].map((day) => (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => setSelectedMatrixDay(day)}
+                          className={`flex-1 flex items-center justify-center text-center px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                            selectedMatrixDay === day
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-slate-600 border-slate-300"
+                          }`}
+                        >
+                          {day}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="date"
+                      value={formatDisplayDateToInput(selectedMatrixDay)}
+                      onChange={handleMatrixDateChange}
+                      aria-label="Chọn ngày xem lịch"
+                      className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium text-slate-700 bg-white ${
+                        isCustomMatrixDay
+                          ? "border-blue-500 ring-2 ring-blue-100"
+                          : "border-slate-300"
+                      }`}
+                    />
                   </div>
 
                   {/* 7 khung giờ: xanh dương = đã kín, xanh lá nét đứt = còn trống */}
@@ -937,6 +1161,8 @@ export default function WorkoutsPage() {
                         onClick={handleOpenDetail}
                         onComplete={handleComplete}
                         onRemindDone={handleRemindDone}
+                        isRescheduling={String(reschedulingSessionId) === String(s.id)}
+                        onToggleReschedule={handleToggleReschedule}
                       />
                     ))}
                   </div>
@@ -957,6 +1183,30 @@ export default function WorkoutsPage() {
                         onClick={handleOpenDetail}
                         onComplete={handleComplete}
                         onRemindDone={handleRemindDone}
+                        isRescheduling={String(reschedulingSessionId) === String(s.id)}
+                        onToggleReschedule={handleToggleReschedule}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Ngày cụ thể khác (không phải Hôm nay / Ngày mai) */}
+              {(groupedSessions.other && groupedSessions.other.length > 0) && (
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Text.Title size="medium" className="font-bold text-gray-900">Ngày khác ({groupedSessions.other.length})</Text.Title>
+                  </div>
+                  <div className="flex flex-col space-y-4">
+                    {groupedSessions.other.map(s => (
+                      <SessionCard
+                        key={s.id}
+                        session={s}
+                        onClick={handleOpenDetail}
+                        onComplete={handleComplete}
+                        onRemindDone={handleRemindDone}
+                        isRescheduling={String(reschedulingSessionId) === String(s.id)}
+                        onToggleReschedule={handleToggleReschedule}
                       />
                     ))}
                   </div>
@@ -977,6 +1227,8 @@ export default function WorkoutsPage() {
                         onClick={handleOpenDetail}
                         onComplete={handleComplete}
                         onRemindDone={handleRemindDone}
+                        isRescheduling={String(reschedulingSessionId) === String(s.id)}
+                        onToggleReschedule={handleToggleReschedule}
                       />
                     ))}
                   </div>
