@@ -71,7 +71,12 @@ function getDayGroup(session) {
 // Panel "Đổi lịch nhanh" ngay trong thẻ buổi tập
 // ============================================
 function RescheduleWorkoutPanel({ session, onClose }) {
-  const { getSlotAvailability, rescheduleSessionById } = useAppContext();
+  const {
+    clients,
+    getSlotAvailability,
+    rescheduleSessionById,
+    contactClientViaZalo,
+  } = useAppContext();
 
   // Ngày đang chọn trong panel (mặc định theo ngày hiện tại của buổi tập)
   const [selectedDay, setSelectedDay] = useState(
@@ -89,8 +94,15 @@ function RescheduleWorkoutPanel({ session, onClose }) {
   // Ngày cụ thể (không phải 2 pill Hôm nay / Ngày mai) thì highlight ô lịch
   const isCustomDay = selectedDay !== "Hôm nay" && selectedDay !== "Ngày mai";
 
-  // Số điện thoại sạch để mở Zalo báo khách
-  const cleanPhone = String(session.phone || "").replace(/\D/g, "");
+  // Tìm học viên thật trong Context để lấy đúng ID và số điện thoại mới nhất
+  const targetClient =
+    clients.find((c) => String(c.id) === String(session.clientId)) ||
+    clients.find((c) => c.name === session.clientName);
+  const targetClientId = targetClient ? targetClient.id : session.clientId;
+  // Số điện thoại sạch (chỉ giữ chữ số) để mở chat Zalo
+  const targetPhone = String(
+    (targetClient && targetClient.phone) || session.phone || ""
+  ).replace(/\D/g, "");
 
   // Bấm 1 ca trống: đổi lịch đúng buổi tập này
   const handlePickSlot = (slot) => {
@@ -191,10 +203,20 @@ function RescheduleWorkoutPanel({ session, onClose }) {
             Đã chuyển lịch sang {notice.time} ({notice.day}) &amp; copy tin nhắn!
           </p>
           <p className="text-[11px] text-emerald-700 mt-1 leading-snug">{notice.message}</p>
+          {/* Thẻ <a> thật: iOS/Zalo WebView luôn mở thẳng cuộc trò chuyện Zalo.
+              Chỉ stopPropagation + copy tin nhắn, TUYỆT ĐỐI KHÔNG preventDefault */}
           <a
-            href={"https://zalo.me/" + cleanPhone}
+            href={"https://zalo.me/" + targetPhone}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(event) => {
+              event.stopPropagation();
+              // Copy lại tin nhắn xác nhận để PT dán vào cửa sổ chat
+              if (notice.message && navigator.clipboard) {
+                navigator.clipboard.writeText(notice.message).catch(() => {});
+              }
+              contactClientViaZalo(targetClientId, targetPhone);
+            }}
             className="mt-2 w-full py-2 px-3 rounded-lg bg-blue-600 active:bg-blue-700 text-white text-xs font-semibold flex items-center justify-center text-center no-underline"
           >
             Báo khách qua Zalo
@@ -432,16 +454,17 @@ export function WorkoutAddView() {
 
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
-      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-8 pb-28 space-y-4 bg-slate-100">
-      {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28 bg-slate-100">
+      {/* Header nền trắng đặc, sticky từ mép trên để chặn nội dung lọt qua tai thỏ */}
       <div
-        className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 pr-24"
+        className="sticky top-0 z-30 bg-white border-b border-slate-200 w-full flex items-center gap-3 px-3 sm:px-4 md:px-8 pb-3 pr-24"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 36px)' }}
       >
         <BackButton onClick={() => navigate(-1)} />
         <Text.Title size="xLarge" className="font-bold text-gray-900">Thêm buổi tập mới</Text.Title>
       </div>
 
+      <div className="p-3 sm:p-4 md:px-8">
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* 1) Chọn học viên */}
         <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-2">
@@ -607,6 +630,7 @@ export function WorkoutAddView() {
         </div>
       </form>
       </div>
+      </div>
     </Page>
   );
 }
@@ -691,10 +715,10 @@ export function WorkoutDetailView() {
 
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
-      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-8 pb-28 space-y-4 bg-slate-100">
-      {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28 bg-slate-100">
+      {/* Header nền trắng đặc, sticky từ mép trên để chặn nội dung lọt qua tai thỏ */}
       <div
-        className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 pr-24"
+        className="sticky top-0 z-30 bg-white border-b border-slate-200 w-full flex items-center gap-3 px-3 sm:px-4 md:px-8 pb-3 pr-24"
         style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 36px)' }}
       >
         <BackButton onClick={() => navigate(-1)} />
@@ -704,6 +728,8 @@ export function WorkoutDetailView() {
         </div>
       </div>
 
+      {/* Nội dung cuộn bên dưới header */}
+      <div className="p-3 sm:p-4 md:px-8 space-y-4">
       {/* Main Info Card */}
       <div className="bg-white rounded-xl border border-slate-300 p-4 space-y-4">
         {/* Time & Status */}
@@ -849,6 +875,7 @@ export function WorkoutDetailView() {
           </Text>
         </div>
       )}
+      </div>
       </div>
     </Page>
   );
@@ -1012,9 +1039,9 @@ export default function WorkoutsPage() {
     <Page className="h-full w-full overflow-hidden bg-slate-100">
       <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28 bg-slate-100">
       <div>
-          {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+          {/* Header nền trắng đặc, sticky từ mép trên để chặn nội dung lọt qua tai thỏ */}
           <div
-            className="bg-white border-b border-gray-200 px-3 sm:px-4 md:px-8 pb-3 sticky top-0 z-30 pr-24"
+            className="sticky top-0 z-30 bg-white border-b border-slate-200 w-full px-3 sm:px-4 md:px-8 pb-3 pr-24"
             style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 36px)' }}
           >
             <div className="flex items-center gap-2">

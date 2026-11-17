@@ -80,6 +80,14 @@
       "dependencies": ["feat-009"],
       "status": "passing",
       "evidence": "2026-11-17: `npx zmp build` passed (528 modules). Browser smoke test: on the 20/11/2026 workout card, 'Đổi lịch nhanh' opened the inline panel; moved Phạm Thị Dung from 09:00 to 14:00; banner 'Đã chuyển lịch sang 14:00 - 15:00 (20/11/2026) & copy tin nhắn!' and 'Báo khách qua Zalo' appeared; matrix updated. Completed cards also expose the action. Client panel moved Trần Thị Bình to 01/12/2026 09:00. Tab click set nav_direction=tab and html.nav-instant=true with computed transitionDuration=0s and animationName=none; class removed after 450ms. Drill-down/back computed transitionDuration=0.15s with 32px translateX. No console errors; no scale/bounce hover classes remain."
+    },
+    {
+      "id": "feat-011",
+      "name": "Critical Navigation, Zalo Deep Link & Top Safe-Area Fixes",
+      "description": "Dashboard 'Xem hồ sơ đầy đủ' opens the exact selected client's full profile; quick-reschedule Zalo actions use real anchors with clean phones and never prevent default; every page/sub-page sticky header is an opaque white shield starting at scroll y=0 with safe-area padding.",
+      "dependencies": ["feat-007", "feat-010"],
+      "status": "passing",
+      "evidence": "2026-11-17: `npx zmp build` passed (528 modules). Browser smoke tests at localhost:2999: Dashboard -> Phạm Thị Dung 'Chi tiết' -> /dashboard-client -> 'Xem hồ sơ đầy đủ' opened /client-detail for Phạm Thị Dung (nav_direction=forward); Back returned to /dashboard-client (nav_direction=back). Both reschedule panels rendered a real <a> ('Gửi xác nhận qua Zalo ngay' href https://zalo.me/0912345678 and 'Báo khách qua Zalo' href https://zalo.me/0901234567, target=_blank); synthetic click showed defaultPrevented=false. All 10 route headers (/, /dashboard-client, /clients, /client-detail, /client-add, /workouts, /workout-detail, /workout-add, /progress, /progress-add) computed position=sticky, top=0px, z-index=30, background=rgb(255,255,255), padding-top=36px, with scroll-container padding-top=0px and header top at y=0. No console errors."
     }
   ]
 }

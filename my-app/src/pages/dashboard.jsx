@@ -157,7 +157,12 @@ function UpcomingSessionRow({ session, onClick }) {
 // Trang chi tiết học viên cần theo dõi (route "/dashboard-client")
 export function DashboardClientDetail() {
   const navigate = useNavigate();
-  const { selectedInactiveClient: client, contactClientViaZalo } = useAppContext();
+  const {
+    clients,
+    selectedInactiveClient: client,
+    setSelectedClient,
+    contactClientViaZalo,
+  } = useAppContext();
 
   // Scroll ref riêng biệt cho màn hình này
   const scrollRef = useRef(null);
@@ -169,10 +174,14 @@ export function DashboardClientDetail() {
     }
   }, []);
 
-  // Bấm "Xem hồ sơ đầy đủ": chuyển sang tab Học viên (không animation)
+  // Bấm "Xem hồ sơ đầy đủ": chọn đúng học viên trong Context rồi mở thẳng hồ sơ
   const handleViewFullProfile = () => {
-    markTabNavigation();
-    navigate("/clients");
+    // Lấy bản ghi đầy đủ từ danh sách chung (so sánh String để tránh lệch kiểu ID)
+    const fullClient = clients.find((c) => String(c.id) === String(client.id)) || client;
+    setSelectedClient(fullClient);
+    // markForwardNavigation() ghi sessionStorage.setItem('nav_direction', 'forward')
+    markForwardNavigation();
+    navigate("/client-detail");
   };
 
   // Chưa chọn học viên (ví dụ tải lại trang): hiện nút quay lại
@@ -191,9 +200,9 @@ export function DashboardClientDetail() {
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
       <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28 bg-slate-100">
-      {/* Header — matches spacing of clients.jsx & workouts.jsx */}
+      {/* Header — nền trắng đặc, phủ kín vùng tai thỏ để nội dung không lọt lên */}
       <div
-        className="bg-white px-3 sm:px-4 md:px-8 pb-3 border-b border-slate-200 sticky top-0 z-30 pr-24"
+        className="sticky top-0 z-30 bg-white border-b border-slate-200 w-full px-3 sm:px-4 md:px-8 pb-3 pr-24"
         style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 36px)" }}
       >
         <div className="flex items-center gap-3">
@@ -424,7 +433,7 @@ function DashboardPage() {
       <div>
         {/* Header — giữ safe-area để tiêu đề không bị thanh trạng thái che */}
         <div
-          className="bg-white border-b border-gray-200 px-3 sm:px-4 md:px-8 pb-3 sticky top-0 z-30 pr-24"
+          className="sticky top-0 z-30 bg-white border-b border-slate-200 w-full px-3 sm:px-4 md:px-8 pb-3 pr-24"
           style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 36px)" }}
         >
           <div className="flex items-center gap-2">

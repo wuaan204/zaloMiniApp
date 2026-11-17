@@ -724,10 +724,11 @@ export function AppProvider({ children }) {
 
   // Cập nhật học viên đang mở ở màn hình chi tiết để giao diện đổi ngay
   const syncSelectedClient = (updatedClient) => {
-    if (selectedClient && selectedClient.id === updatedClient.id) {
+    // So sánh String để hồ sơ đang mở vẫn nhận cập nhật dù ID là số hay chuỗi
+    if (selectedClient && String(selectedClient.id) === String(updatedClient.id)) {
       setSelectedClient(updatedClient);
     }
-    if (selectedInactiveClient && selectedInactiveClient.id === updatedClient.id) {
+    if (selectedInactiveClient && String(selectedInactiveClient.id) === String(updatedClient.id)) {
       setSelectedInactiveClient(updatedClient);
     }
   };
@@ -747,11 +748,11 @@ export function AppProvider({ children }) {
 
   // Cập nhật 1 học viên (cả trong danh sách lẫn học viên đang được chọn)
   const updateClient = (id, updates) => {
-    setClients(clients.map((c) => (c.id === id ? { ...c, ...updates } : c)));
-    if (selectedClient && selectedClient.id === id) {
+    setClients(clients.map((c) => (String(c.id) === String(id) ? { ...c, ...updates } : c)));
+    if (selectedClient && String(selectedClient.id) === String(id)) {
       setSelectedClient({ ...selectedClient, ...updates });
     }
-    if (selectedInactiveClient && selectedInactiveClient.id === id) {
+    if (selectedInactiveClient && String(selectedInactiveClient.id) === String(id)) {
       setSelectedInactiveClient({ ...selectedInactiveClient, ...updates });
     }
   };

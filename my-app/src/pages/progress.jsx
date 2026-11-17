@@ -143,7 +143,7 @@ const CalendarIcon = ({ className = "w-3.5 h-3.5 text-slate-400" }) => (
 function PageHeader({ title, subtitle, onBack }) {
   return (
     <div
-      className="bg-white border-b border-gray-200 px-3 sm:px-4 md:px-8 pb-3 sticky top-0 z-30 pr-24"
+      className="sticky top-0 z-30 bg-white border-b border-slate-200 w-full px-3 sm:px-4 md:px-8 pb-3 pr-24"
       style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 36px)" }}
     >
       <div className="flex items-center gap-2">

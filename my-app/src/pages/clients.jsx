@@ -57,8 +57,14 @@ const quickMessages = [
 // (2) PANEL "ĐỔI LỊCH NHANH" (INLINE TRONG THẺ HỌC VIÊN)
 // ============================================
 function ReschedulePanel({ client, onClose }) {
-  // Lấy danh sách buổi tập + 2 hàm xử lý khung giờ từ Context dùng chung
-  const { sessions, getSlotAvailability, rescheduleClientSession } = useAppContext();
+  // Lấy danh sách học viên, buổi tập và các hàm xử lý từ Context dùng chung
+  const {
+    clients,
+    sessions,
+    getSlotAvailability,
+    rescheduleClientSession,
+    contactClientViaZalo,
+  } = useAppContext();
 
   // Ngày đang chọn trong panel: "Hôm nay" hoặc "Ngày mai"
   const [selectedRescheduleDay, setSelectedRescheduleDay] = useState("Hôm nay");
@@ -81,8 +87,13 @@ function ReschedulePanel({ client, onClose }) {
   const isCustomRescheduleDay =
     selectedRescheduleDay !== "Hôm nay" && selectedRescheduleDay !== "Ngày mai";
 
-  // Số điện thoại sạch để mở chat Zalo gửi xác nhận
-  const cleanPhone = String(client.phone || "").replace(/\D/g, "");
+  // Tìm học viên thật trong Context để lấy đúng ID và số điện thoại mới nhất
+  const targetClient = clients.find((c) => String(c.id) === String(client.id));
+  const targetClientId = targetClient ? targetClient.id : client.id;
+  // Số điện thoại sạch (chỉ giữ 10 chữ số) để mở chat Zalo
+  const targetPhone = String(
+    (targetClient && targetClient.phone) || client.phone || ""
+  ).replace(/\D/g, "");
 
   // Chạm vào 1 khung giờ trống: đổi lịch + lấy tin nhắn xác nhận
   const handlePickSlot = (slot) => {
@@ -186,10 +197,20 @@ function ReschedulePanel({ client, onClose }) {
             Đã đổi lịch sang {rescheduleNotice.time} ({rescheduleNotice.day}) &amp; copy tin nhắn xác nhận!
           </p>
           <p className="text-[11px] text-emerald-700 mt-1 leading-snug">{rescheduleNotice.message}</p>
+          {/* Thẻ <a> thật: iOS/Zalo WebView luôn mở thẳng cuộc trò chuyện Zalo.
+              Chỉ stopPropagation + copy tin nhắn, TUYỆT ĐỐI KHÔNG preventDefault */}
           <a
-            href={"https://zalo.me/" + cleanPhone}
+            href={"https://zalo.me/" + targetPhone}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(event) => {
+              event.stopPropagation();
+              // Copy lại tin nhắn xác nhận để PT dán vào cửa sổ chat
+              if (rescheduleNotice.message && navigator.clipboard) {
+                navigator.clipboard.writeText(rescheduleNotice.message).catch(() => {});
+              }
+              contactClientViaZalo(targetClientId, targetPhone);
+            }}
             className="mt-2 w-full py-2 px-3 rounded-lg bg-blue-600 active:bg-blue-700 text-white text-xs font-semibold flex items-center justify-center text-center no-underline"
           >
             Gửi xác nhận qua Zalo ngay
@@ -318,10 +339,10 @@ export function ClientAddView() {
 
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
-      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-8 pb-28 space-y-4 bg-slate-100">
-      {/* Header — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28 bg-slate-100">
+      {/* Header nền trắng đặc, sticky từ mép trên để chặn nội dung lọt qua tai thỏ */}
       <div
-        className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 pr-24"
+        className="sticky top-0 z-30 bg-white border-b border-slate-200 w-full flex items-center gap-3 px-3 sm:px-4 md:px-8 pb-3 pr-24"
         style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 36px)" }}
       >
         <BackButton onClick={() => navigate(-1)} />
@@ -331,6 +352,7 @@ export function ClientAddView() {
         </div>
       </div>
 
+      <div className="p-3 sm:p-4 md:px-8">
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
         <div>
           <Text className="text-sm text-gray-500 mb-1 block">Họ tên <span className="text-red-500">*</span></Text>
@@ -361,6 +383,7 @@ export function ClientAddView() {
           <Button className="inline-flex items-center justify-center text-center" variant="primary" htmlType="submit">Thêm học viên</Button>
         </div>
       </form>
+      </div>
       </div>
     </Page>
   );
@@ -426,10 +449,10 @@ export function ClientDetailView() {
 
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
-      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-8 pb-28 space-y-4 bg-slate-100">
-      {/* Header inside page — safe-area-inset-top keeps title below status bar; pr-24 clears Zalo capsule */}
+      <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28 bg-slate-100">
+      {/* Header nền trắng đặc, sticky từ mép trên để chặn nội dung lọt qua tai thỏ */}
       <div
-        className="flex items-center gap-3 pb-3 border-b border-gray-200 sticky top-0 bg-slate-100 z-30 px-0 pr-24"
+        className="sticky top-0 z-30 bg-white border-b border-slate-200 w-full flex items-center gap-3 px-3 sm:px-4 md:px-8 pb-3 pr-24"
         style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 36px)" }}
       >
         <BackButton onClick={() => navigate(-1)} />
@@ -448,8 +471,10 @@ export function ClientDetailView() {
         </span>
       </div>
 
+      {/* Nội dung cuộn bên dưới header */}
+      <div className="p-3 sm:p-4 md:px-8 space-y-4">
       {/* 3 ô tóm tắt: mục tiêu, gói tập, số ngày chưa tương tác */}
-      <div className="grid grid-cols-3 gap-2 w-full mt-3">
+      <div className="grid grid-cols-3 gap-2 w-full">
         <div className={`flex flex-col items-center justify-center text-center p-2 rounded-xl min-w-0 ${pillClasses("goal")}`}>
           <span className="text-[10px] font-semibold uppercase opacity-75 leading-tight mb-0.5">Mục tiêu</span>
           <span className="text-xs font-bold leading-snug line-clamp-2 break-words w-full">{client.goal}</span>
@@ -588,6 +613,7 @@ export function ClientDetailView() {
             </div>
           ))
         )}
+      </div>
       </div>
       </div>
     </Page>
@@ -820,9 +846,9 @@ export default function ClientsPage() {
   return (
     <Page className="h-full w-full overflow-hidden bg-slate-100">
       <div ref={scrollRef} className="app-page-scroll h-full w-full overflow-y-auto overflow-x-hidden pb-28 bg-slate-100">
-      {/* Thanh tiêu đề: chừa chỗ cho thanh trạng thái và nút capsule của Zalo */}
+      {/* Thanh tiêu đề nền trắng đặc, chừa chỗ cho thanh trạng thái và capsule Zalo */}
       <div
-        className="bg-white border-b border-gray-200 px-3 sm:px-4 md:px-8 pb-3 sticky top-0 z-30"
+        className="sticky top-0 z-30 bg-white border-b border-slate-200 w-full px-3 sm:px-4 md:px-8 pb-3"
         style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 36px)" }}
       >
         {/* Hàng tiêu đề: chỉ hàng này chừa pr-24 để tránh nút capsule của Zalo */}
